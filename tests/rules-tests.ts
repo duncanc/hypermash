@@ -130,6 +130,24 @@ test('rules tokenization', async (ctx) => {
       ]);
     });
 
+    await ctx.test('url token', async (ctx) => {
+
+      assertEqualTokens('url(/some.thing#blah)', [
+        {type:'url', content:'/some.thing#blah'},
+      ]);
+
+      assertEqualTokens('url(  /some.thing#blah \t )', [
+        {type:'url', content:'/some.thing#blah'},
+      ]);
+
+      assertEqualTokens('url("/some.thing#blah")', [
+        {type:'call-open', content:'url'},
+        {type:'string', content:'/some.thing#blah'},
+        {type:'symbol', content:')'},
+      ]);
+
+    });
+
   });
 
   await ctx.test('hash', async ctx => {
