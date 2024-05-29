@@ -193,7 +193,6 @@ export function *eachToken(text: string): Generator<FlatToken> {
       yield {type:'call-open', content:m[0].slice(0,-1).replace(identEscapePattern, escapeReplace)};
     }
     else {
-      console.log(JSON.stringify(m[0]));
       yield {type:'identifier', content:m[0].replace(identEscapePattern, escapeReplace)};
     }
   }
