@@ -94,7 +94,7 @@ test('rules tokenization', async (ctx) => {
         {type: 'whitespace', content: ' '},
       ]);
 
-      assertEqualTokens('\\4F \\00004B3', [
+      assertEqualTokens('\\4F \\00004B3()', [
         {type: 'call-open', content: 'OK3'},
         {type: 'symbol', content:')'},
       ]);
