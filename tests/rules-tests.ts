@@ -136,6 +136,14 @@ test('rules tokenization', async (ctx) => {
         {type:'url', content:'/some.thing#blah'},
       ]);
 
+      assertEqualTokens('\\U\\R\\L(/some.thing#blah)', [
+        {type:'url', content:'/some.thing#blah'},
+      ]);
+
+      assertEqualTokens('\\75\\0052\t\\00006c\r\n(/some.thing#blah)', [
+        {type:'url', content:'/some.thing#blah'},
+      ]);
+
       assertEqualTokens('url(  /some.thing#blah \t )', [
         {type:'url', content:'/some.thing#blah'},
       ]);

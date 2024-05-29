@@ -26,7 +26,7 @@ const tokenPattern = new RegExp([
   /\/\*(?:[^]*?\*\/)?/.source,
   /[ \t\r\n\f]+/.source,
   // match[1]: url() token
-  /[uU][rR][lL]\([ \t\r\n\f]*([^"'()\\ \t\r\n\f\x00-\x08\x0E-\x1F\x7F]+)[ \t\r\n\f]*\)/.source,
+  /(?:\\?[uU]|\\0{0,4}[57]5(?:[ \t\n\f]|\r\n?)?)(?:\\?[rR]|\\0{0,4}[57]2(?:[ \t\n\f]|\r\n?)?)(?:\\?[lL]|\\0{0,4}[46][cC](?:[ \t\n\f]|\r\n?)?)\([ \t\r\n\f]*([^"'()\\ \t\r\n\f\x00-\x08\x0E-\x1F\x7F]+)[ \t\r\n\f]*\)/.source,
   // match[2]: ident-is-call token
   identPattern.source + '([(])?',
   '@' + identPattern.source,
