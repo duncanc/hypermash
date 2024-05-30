@@ -1,7 +1,7 @@
 
 import { test, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { eachToken, FlatToken } from '../src/rules-handling';
+import { eachToken, FlatToken, toUnits, Unit } from '../src/rules-handling';
 
 test('rules tokenization', async (ctx) => {
 
@@ -299,6 +299,205 @@ test('rules tokenization', async (ctx) => {
         }
         assert.ok(error instanceof SyntaxError, 'unterminated string did not produce syntax error');
       });
+    });
+
+  });
+
+});
+
+test('rules nested structure', async (ctx) => {
+
+  await ctx.test('round brackets', async ctx => {
+
+    await ctx.test('nested', async ctx => {
+      assert.deepEqual(toUnits('( ( ( ) ) )'), [
+        {
+          type: 'round',
+          content: [
+            {type: 'whitespace', content: ' '},
+            {
+              type: 'round',
+              content: [
+                {type: 'whitespace', content: ' '},
+                {
+                  type: 'round',
+                  content: [
+                    {type: 'whitespace', content: ' '},
+                  ],
+                },
+                {type: 'whitespace', content: ' '},
+              ],
+            },
+            {type: 'whitespace', content: ' '},
+          ],
+        } satisfies Unit
+      ]);
+    });
+
+    await ctx.test('unbalanced', async ctx => {
+
+      let error: unknown = null;
+      try {
+        toUnits(')');
+      }
+      catch (e) {
+        error = e;
+      }
+      assert.ok(error instanceof SyntaxError, 'unbalanced bracket did not produce syntax error');
+
+      error = null;
+      try {
+        toUnits('(');
+      }
+      catch (e) {
+        error = e;
+      }
+      assert.ok(error instanceof SyntaxError, 'unbalanced bracket did not produce syntax error');
+    });
+
+  });
+
+  await ctx.test('function call', async ctx => {
+
+    await ctx.test('nested', async ctx => {
+      assert.deepEqual(toUnits('a( b( c( ) ) )'), [
+        {
+          type: 'call',
+          funcName: 'a',
+          params: [
+            {type: 'whitespace', content: ' '},
+            {
+              type: 'call',
+              funcName: 'b',
+              params: [
+                {type: 'whitespace', content: ' '},
+                {
+                  type: 'call',
+                  funcName: 'c',
+                  params: [
+                    {type: 'whitespace', content: ' '},
+                  ],
+                },
+                {type: 'whitespace', content: ' '},
+              ],
+            },
+            {type: 'whitespace', content: ' '},
+          ],
+        } satisfies Unit
+      ]);
+    });
+
+    await ctx.test('unbalanced', async ctx => {
+
+      let error: unknown = null;
+      error = null;
+      try {
+        toUnits('a(');
+      }
+      catch (e) {
+        error = e;
+      }
+      assert.ok(error instanceof SyntaxError, 'unbalanced bracket did not produce syntax error');
+    });
+
+  });
+
+  await ctx.test('square brackets', async ctx => {
+
+    await ctx.test('nested', async ctx => {
+      assert.deepEqual(toUnits('[ [ [ ] ] ]'), [
+        {
+          type: 'square',
+          content: [
+            {type: 'whitespace', content: ' '},
+            {
+              type: 'square',
+              content: [
+                {type: 'whitespace', content: ' '},
+                {
+                  type: 'square',
+                  content: [
+                    {type: 'whitespace', content: ' '},
+                  ],
+                },
+                {type: 'whitespace', content: ' '},
+              ],
+            },
+            {type: 'whitespace', content: ' '},
+          ],
+        } satisfies Unit
+      ]);
+    });
+
+    await ctx.test('unbalanced', async ctx => {
+
+      let error: unknown = null;
+      try {
+        toUnits(']');
+      }
+      catch (e) {
+        error = e;
+      }
+      assert.ok(error instanceof SyntaxError, 'unbalanced bracket did not produce syntax error');
+
+      error = null;
+      try {
+        toUnits('[');
+      }
+      catch (e) {
+        error = e;
+      }
+      assert.ok(error instanceof SyntaxError, 'unbalanced bracket did not produce syntax error');
+    });
+
+  });
+
+  await ctx.test('curly brackets', async ctx => {
+
+    await ctx.test('nested', async ctx => {
+      assert.deepEqual(toUnits('{ { { } } }'), [
+        {
+          type: 'curly',
+          content: [
+            {type: 'whitespace', content: ' '},
+            {
+              type: 'curly',
+              content: [
+                {type: 'whitespace', content: ' '},
+                {
+                  type: 'curly',
+                  content: [
+                    {type: 'whitespace', content: ' '},
+                  ],
+                },
+                {type: 'whitespace', content: ' '},
+              ],
+            },
+            {type: 'whitespace', content: ' '},
+          ],
+        } satisfies Unit
+      ]);
+    });
+
+    await ctx.test('unbalanced', async ctx => {
+
+      let error: unknown = null;
+      try {
+        toUnits('}');
+      }
+      catch (e) {
+        error = e;
+      }
+      assert.ok(error instanceof SyntaxError, 'unbalanced bracket did not produce syntax error');
+
+      error = null;
+      try {
+        toUnits('{');
+      }
+      catch (e) {
+        error = e;
+      }
+      assert.ok(error instanceof SyntaxError, 'unbalanced bracket did not produce syntax error');
     });
 
   });

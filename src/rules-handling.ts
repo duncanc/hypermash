@@ -197,3 +197,138 @@ export function *eachToken(text: string): Generator<FlatToken> {
     }
   }
 }
+
+
+type LiteralUnit = {
+  type: 'comment' | 'whitespace' | 'string' | 'identifier' | 'at-identifier' | 'hash' | 'symbol';
+  content: string;
+};
+
+type ContainerUnit = {
+  type: 'curly' | 'square' | 'round';
+  content: Unit[];
+};
+
+type CallUnit = {
+  type: 'call';
+  funcName: string;
+  params: Unit[];
+}
+
+export type Unit = LiteralUnit | ContainerUnit | CallUnit;
+
+export function toUnits(src: string | Iterable<FlatToken> | Iterator<FlatToken>): Unit[] {
+  if (typeof src === 'string') {
+    src = eachToken(src);
+  }
+  const iter = (Symbol.iterator in src) ? src[Symbol.iterator]() : src;
+  const contextStack: Unit[][] = [];
+  const topLevel: Unit[] = [];
+  let context = topLevel;
+  for (let step = iter.next(); !step.done; step = iter.next()) {
+    const token = step.value;
+    switch (token.type) {
+      case 'call-open': {
+        const newCall: CallUnit = {
+          type: 'call',
+          funcName: token.content,
+          params: [],
+        };
+        context.push(newCall);
+        contextStack.push(context);
+        context = newCall.params;
+        break;
+      }
+      case 'symbol': {
+        switch (token.content) {
+          case '(': {
+            const newBlock: ContainerUnit = {
+              type: 'round',
+              content: [],
+            };
+            context.push(newBlock);
+            contextStack.push(context);
+            context = newBlock.content;
+            break;
+          }
+          case ')': {
+            if (contextStack.length === 0) {
+              throw new SyntaxError('mismatched parentheses');
+            }
+            context = contextStack.pop()!;
+            if (context[context.length-1].type !== 'round' && context[context.length-1].type !== 'call') {
+              throw new SyntaxError('mismatched parentheses');
+            }
+            break;
+          }
+          case '[': {
+            const newBlock: ContainerUnit = {
+              type: 'square',
+              content: [],
+            };
+            context.push(newBlock);
+            contextStack.push(context);
+            context = newBlock.content;
+            break;
+          }
+          case ']': {
+            if (contextStack.length === 0) {
+              throw new SyntaxError('mismatched parentheses');
+            }
+            context = contextStack.pop()!;
+            if (context[context.length-1].type !== 'square') {
+              throw new SyntaxError('mismatched parentheses');
+            }
+            break;
+          }
+          case '{': {
+            const newBlock: ContainerUnit = {
+              type: 'curly',
+              content: [],
+            };
+            context.push(newBlock);
+            contextStack.push(context);
+            context = newBlock.content;
+            break;
+          }
+          case '}': {
+            if (contextStack.length === 0) {
+              throw new SyntaxError('mismatched parentheses');
+            }
+            context = contextStack.pop()!;
+            if (context[context.length-1].type !== 'curly') {
+              throw new SyntaxError('mismatched parentheses');
+            }
+            break;
+          }
+          default: {
+            context.push(token as LiteralUnit);
+            break;
+          }
+        }
+        break;
+      }
+      case 'url': {
+        context.push({
+          type: 'call',
+          funcName: 'url',
+          params: [
+            {
+              type: 'string',
+              content: token.content,
+            },
+          ],
+        });
+        break;
+      }
+      default: {
+        context.push(token as LiteralUnit);
+        break;
+      }
+    }
+  }
+  if (contextStack.length !== 0) {
+    throw new SyntaxError('unbalanced brackets');
+  }
+  return topLevel;
+}
