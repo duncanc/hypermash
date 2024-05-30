@@ -60,6 +60,10 @@ const escapeReplace = (str: string) => {
     }
     return String.fromCodePoint(hex);
   }
+  if (/^\\[\r\n\f]/.test(str)) {
+    // escaped newlines are omitted, not preserved
+    return '';
+  }
   return str.slice(1);
 };
 

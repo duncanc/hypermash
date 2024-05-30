@@ -243,7 +243,7 @@ test('rules tokenization', async (ctx) => {
       });
       await ctx.test('escapes', async ctx => {
         assertEqualTokens(String.raw `"\"\\\4F \00004B3${'\\\r\n'}"`, [
-          {type:'string', content: "\"\\OK3\r\n"},
+          {type:'string', content: "\"\\OK3"},
         ])
       });
       await ctx.test('unterminated (end of content)', async ctx => {
@@ -276,7 +276,7 @@ test('rules tokenization', async (ctx) => {
       });
       await ctx.test('escapes', async ctx => {
         assertEqualTokens(String.raw `'\'\\\4F \00004B3${'\\\r\n'}'`, [
-          {type:'string', content: "'\\OK3\r\n"},
+          {type:'string', content: "'\\OK3"},
         ])
       });
       await ctx.test('unterminated (end of content)', async ctx => {
