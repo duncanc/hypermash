@@ -502,4 +502,15 @@ test('rules nested structure', async (ctx) => {
 
   });
 
+  await ctx.test('ignore comments and whitespace', async ctx => {
+
+    assert.deepEqual(
+      toUnits(' /* blah */  10 \r\n   \f  ', { ignoreComments: true, ignoreWhitespace: true}),
+      [
+        {type:'number', value:10},
+      ] satisfies Unit[]
+    );
+
+  });
+
 });

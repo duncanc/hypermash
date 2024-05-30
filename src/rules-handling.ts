@@ -204,6 +204,12 @@ type LiteralUnit = {
   content: string;
 };
 
+type NumericUnit = {
+  type: 'number';
+  value: number;
+  unit?: string;
+};
+
 type ContainerUnit = {
   type: 'curly' | 'square' | 'round';
   content: Unit[];
@@ -215,9 +221,18 @@ type CallUnit = {
   params: Unit[];
 }
 
-export type Unit = LiteralUnit | ContainerUnit | CallUnit;
+export type Unit = LiteralUnit | ContainerUnit | CallUnit | NumericUnit;
 
-export function toUnits(src: string | Iterable<FlatToken> | Iterator<FlatToken>): Unit[] {
+export function toUnits(
+  src: string | Iterable<FlatToken> | Iterator<FlatToken>,
+  {
+    ignoreWhitespace = false,
+    ignoreComments = false,
+  }: {
+    ignoreWhitespace?: boolean;
+    ignoreComments?: boolean;
+  } = {},
+): Unit[] {
   if (typeof src === 'string') {
     src = eachToken(src);
   }
@@ -319,6 +334,20 @@ export function toUnits(src: string | Iterable<FlatToken> | Iterator<FlatToken>)
             },
           ],
         });
+        break;
+      }
+      case 'whitespace': {
+        if (ignoreWhitespace) continue;
+        context.push(token as LiteralUnit);
+        break;
+      }
+      case 'comment': {
+        if (ignoreComments) continue;
+        context.push(token as LiteralUnit);
+        break;
+      }
+      case 'number': {
+        context.push(token as NumericUnit);
         break;
       }
       default: {
