@@ -365,3 +365,328 @@ export function toUnits(
   }
   return topLevel;
 }
+
+export namespace UnitMatcher {
+  export type ZeroWhitespace = {type: 'zero-whitespace'};
+  export type NonZeroWhitespace = {type: 'nonzero-whitespace'};
+  export type End = {type:'end'};
+  export type Any = {type:'any'};
+  export type Repeat = {type:'repeat', min:number, max:number, inner:UnitMatcher};
+  export type Sequence = {type:'sequence', sequence:UnitMatcher[]};
+  export type Alternate = {type:'alternate', options:UnitMatcher[]};
+  export type Symbol = {type:'symbol', symbol:string};
+  export type Identifier = {type:'identifier' | 'hash' | 'at-identifier', match?: string | RegExp};
+  export type Call = {type:'call', funcNameMatch: string | RegExp, params: UnitMatcher};
+  export type Container = {type: 'round' | 'square' | 'curly', contents: UnitMatcher};
+  export type String = { type: 'string'; };
+  export type Number = { type: 'number'; };
+
+  export type CaptureConstant = {type: 'capture-constant', name?: string, constant:unknown};
+  export type CaptureArray = {type: 'capture-array', name?: string, inner:UnitMatcher};
+  export type CaptureObject = {type: 'capture-object', name?: string, inner:UnitMatcher};
+  export type CaptureTransform = {
+    type: 'capture-transform';
+    inner: UnitMatcher;
+    name?: string;
+    transform: (...captures: unknown[]) => unknown;
+  };
+  export type CaptureReduce = {
+    type: 'capture-reduce';
+    inner: UnitMatcher;
+    name?: string;
+    initialValue: unknown;
+    reduce: (prevValue: unknown, capture: unknown) => unknown;
+  };
+  export type CaptureUnit = {
+    type: 'capture-unit';
+    inner?: UnitMatcher;
+    name?: string;
+  };
+  export type CaptureContent = {
+    type: 'capture-content';
+    inner?: UnitMatcher;
+    name?: string;
+  };
+};
+
+export type UnitMatcher = (
+  | UnitMatcher.NonZeroWhitespace
+  | UnitMatcher.ZeroWhitespace
+  | UnitMatcher.End
+  | UnitMatcher.Any
+  | UnitMatcher.Repeat
+  | UnitMatcher.Sequence
+  | UnitMatcher.Alternate
+  | UnitMatcher.Symbol
+  | UnitMatcher.Identifier
+  | UnitMatcher.Call
+  | UnitMatcher.Container
+  | UnitMatcher.String
+  | UnitMatcher.Number
+
+  | UnitMatcher.CaptureConstant
+  | UnitMatcher.CaptureArray
+  | UnitMatcher.CaptureObject
+  | UnitMatcher.CaptureTransform
+  | UnitMatcher.CaptureReduce
+  | UnitMatcher.CaptureUnit
+  | UnitMatcher.CaptureContent
+);
+
+export function matchUnits(
+  units: Unit[],
+  matcher: UnitMatcher,
+  oncapture = (capture: unknown, name?: string) => {},
+  start_i = 0
+): number {
+  if (matcher.type === 'nonzero-whitespace') {
+    if (!units[start_i] || (
+      units[start_i].type !== 'whitespace'
+      && units[start_i].type !== 'comment'
+    )) {
+      return -1;
+    }
+    do {
+      start_i++;
+    } while (units[start_i] && (
+      units[start_i].type === 'whitespace'
+      || units[start_i].type === 'comment'
+    ));
+    return start_i;
+  }
+  else if (matcher.type === 'zero-whitespace') {
+    if (units[start_i] && (
+      units[start_i].type === 'whitespace'
+      || units[start_i].type === 'comment'
+    )) {
+      return -1;
+    }
+    return start_i;
+  }
+  else {
+    while (units[start_i] && (
+      units[start_i].type === 'whitespace'
+      || units[start_i].type === 'comment'
+    )) {
+      start_i++;  
+    }
+  }
+  switch (matcher.type) {
+    case 'alternate': {
+      for (const h of matcher.options) {
+        const end_i = matchUnits(units, h, oncapture, start_i);
+        if (end_i !== -1) return end_i;
+      }
+      return -1;
+    }
+    case 'any': {
+      return units[start_i] ? start_i + 1 : -1;
+    }
+    case 'at-identifier': case 'identifier': case 'hash': {
+      const unit = units[start_i];
+      if (!unit || unit.type !== matcher.type) {
+        return -1;
+      }
+      if (typeof matcher.match === 'string') {
+        if (matcher.match !== unit.content) {
+          return -1;
+        }
+      }
+      else if (matcher.match instanceof RegExp) {
+        if (!matcher.match.test(unit.content)) {
+          return -1;
+        }
+      }
+      return start_i + 1;
+    }
+    case 'call': {
+      const unit = units[start_i];
+      if (!unit || unit.type !== 'call') {
+        return -1;
+      }
+      if (typeof matcher.funcNameMatch === 'string') {
+        if (matcher.funcNameMatch !== unit.funcName) {
+          return -1;
+        }
+      }
+      else {
+        if (!matcher.funcNameMatch.test(unit.funcName)) {
+          return -1;
+        }
+      }
+      if (matchUnits(unit.params, matcher.params, oncapture, 0) !== unit.params.length) {
+        return -1;
+      }
+      return start_i + 1;
+    }
+    case 'curly': case 'round': case 'square': {
+      const unit = units[start_i];
+      if (!unit || unit.type !== matcher.type) {
+        return -1;
+      }
+      if (matchUnits(unit.content, matcher.contents, oncapture) !== unit.content.length) {
+        return -1;
+      }
+      return start_i + 1;
+    }
+    case 'end': {
+      if (start_i < units.length) {
+        return -1;
+      }
+      return start_i;
+    }
+    case 'repeat': {
+      let count = 0;
+      let i = start_i;
+      while (count < matcher.min) {
+        const new_i = matchUnits(units, matcher.inner, oncapture, i);
+        if (new_i === -1) return -1;
+        if (new_i === i) return i;
+        i = new_i;
+        count++;
+      }
+      while (count < matcher.max) {
+        const new_i = matchUnits(units, matcher.inner, oncapture, i);
+        if (new_i === -1) return i;
+        if (new_i === i) return i;
+        i = new_i;
+        count++;
+      }
+      return i;
+    }
+    case 'sequence': {
+      let i = start_i;
+      for (const h of matcher.sequence) {
+        i = matchUnits(units, h, oncapture, i);
+        if (i === -1) break;
+      }
+      return i;
+    }
+    case 'symbol': {
+      const unit = units[start_i];
+      if (!unit || unit.type !== 'symbol' || unit.content !== matcher.symbol) {
+        return -1;
+      }
+      return start_i + 1;
+    }
+    case 'capture-array': {
+      const arr: unknown[] = [];
+      const oncapture2 = (v: unknown) => { arr.push(v); };
+      const end_i = matchUnits(units, matcher.inner, oncapture2, start_i);
+      if (end_i === -1) {
+        return -1;
+      }
+      oncapture(arr, matcher.name);
+      return end_i;
+    }
+    case 'capture-object': {
+      const obj: {[key: string]: unknown} = Object.create(null);
+      const oncapture2 = (v: unknown, name?: string) => {
+        if (typeof name === 'string') {
+          obj[name] = v;
+        }
+      };
+      const end_i = matchUnits(units, matcher.inner, oncapture2, start_i);
+      if (end_i === -1) {
+        return -1;
+      }
+      oncapture(obj, matcher.name);
+      return end_i;
+    }
+    case 'capture-constant': {
+      oncapture(matcher.constant, matcher.name);
+      return start_i;
+    }
+    case 'capture-transform': {
+      const caps: unknown[] = [];
+      const oncapture2 = (cap: unknown) => { caps.push(cap); };
+      const end_i = matchUnits(units, matcher.inner, oncapture2, start_i);
+      if (end_i === -1) {
+        return -1;
+      }
+      oncapture(matcher.transform(...caps), matcher.name);
+      return end_i;
+    }
+    case 'capture-reduce': {
+      let cap = matcher.initialValue;
+      const oncapture2 = (c: unknown) => { cap = matcher.reduce(cap, c); };
+      const end_i = matchUnits(units, matcher.inner, oncapture2, start_i);
+      if (end_i === -1) {
+        return -1;
+      }
+      oncapture(cap, matcher.name);
+      return end_i;
+    }
+    case 'capture-unit': {
+      if (!matcher.inner) {
+        if (!units[start_i]) {
+          oncapture(null);
+          return start_i;
+        }
+        oncapture(units[start_i]);
+        return start_i + 1;
+      }
+      const end_i = matchUnits(units, matcher.inner, ()=>{}, start_i);
+      if (end_i === -1) return -1;
+      if (end_i === start_i) {
+        oncapture(null);
+        return end_i;
+      }
+      oncapture(units[end_i-1], matcher.name);
+      return end_i;
+    }
+    case 'string': {
+      if (!units[start_i] || units[start_i].type !== 'string') {
+        return -1;
+      }
+      return start_i + 1;
+    }
+    case 'number': {
+      if (!units[start_i] || units[start_i].type !== 'number') {
+        return -1;
+      }
+      return start_i + 1;
+    }
+    case 'capture-content': {
+      const cMatcher = matcher.inner || {type:'any'};
+      const end_i = matchUnits(units, cMatcher, () => {}, start_i);
+      if (end_i === -1) return -1;
+      if (end_i === start_i) {
+        oncapture('');
+        return end_i;
+      }
+      if (end_i === start_i + 1) {
+        oncapture(getUnitContent(units[start_i]));
+        return end_i;
+      }
+      oncapture(units.slice(start_i, end_i).map(getUnitContent).join(''));
+      return end_i;
+    }
+    default: {
+      return -1;
+    }
+  }
+}
+
+function getUnitContent(unit: Unit): string | number {
+  switch (unit.type) {
+    case 'at-identifier': case 'identifier': case 'hash':
+    case 'string': case 'symbol': {
+      return unit.content;
+    }
+    case 'number': {
+      return unit.value;
+    }
+    case 'curly': case 'round': case 'square': {
+      const values = unit.content.map(getUnitContent);
+      return values.length === 1 ? values[0] : values.join('');
+    }
+    case 'call': {
+      const values = unit.params.map(getUnitContent);
+      return values.length === 1 ? values[0] : values.join('');
+    }
+    default: {
+      return '';
+    }
+  }
+}

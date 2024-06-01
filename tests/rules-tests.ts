@@ -1,7 +1,7 @@
 
 import { test, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { eachToken, FlatToken, toUnits, Unit } from '../src/rules-handling';
+import { eachToken, FlatToken, matchUnits, toUnits, Unit, UnitMatcher } from '../src/rules-handling';
 
 test('rules tokenization', async (ctx) => {
 
@@ -509,6 +509,34 @@ test('rules nested structure', async (ctx) => {
       [
         {type:'number', value:10},
       ] satisfies Unit[]
+    );
+
+  });
+
+});
+
+test('rules matching', async (ctx) => {
+
+  await ctx.test('any token', async ctx => {
+
+    assert.equal(
+      matchUnits(
+        toUnits('3'),
+        {
+          type: 'any',
+        } satisfies UnitMatcher,
+      ),
+      1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits(''),
+        {
+          type: 'any',
+        } satisfies UnitMatcher,
+      ),
+      -1,
     );
 
   });
