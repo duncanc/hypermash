@@ -968,5 +968,44 @@ test('rules matching', async (ctx) => {
 
   });
 
+  await ctx.test('call', async ctx => {
+
+    assert.equal(
+      matchUnits(
+        toUnits('ident()'),
+        {
+          type: 'call',
+          params: {type:'end'},
+          funcNameMatch: 'ident'
+        },
+      ),
+      1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('ident()'),
+        {
+          type: 'call',
+          params: {type:'end'},
+          funcNameMatch: /de/,
+        },
+      ),
+      1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('ident(1)'),
+        {
+          type: 'call',
+          params: {type:'end'},
+          funcNameMatch: 'ident'
+        },
+      ),
+      -1,
+    );
+
+  });
 
 });
