@@ -898,5 +898,75 @@ test('rules matching', async (ctx) => {
 
   });
 
+  await ctx.test('brackets', async ctx => {
+
+    assert.equal(
+      matchUnits(
+        toUnits('()'),
+        {
+          type: 'round',
+          contents: {type:'end'}
+        },
+      ),
+      1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('[]'),
+        {
+          type: 'square',
+          contents: {type:'end'}
+        },
+      ),
+      1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('{}'),
+        {
+          type: 'curly',
+          contents: {type:'end'}
+        },
+      ),
+      1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('(1)'),
+        {
+          type: 'round',
+          contents: {type:'end'}
+        },
+      ),
+      -1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('[1]'),
+        {
+          type: 'square',
+          contents: {type:'end'}
+        },
+      ),
+      -1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('{1}'),
+        {
+          type: 'curly',
+          contents: {type:'end'}
+        },
+      ),
+      -1,
+    );
+
+  });
+
 
 });
