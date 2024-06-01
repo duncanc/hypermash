@@ -541,4 +541,148 @@ test('rules matching', async (ctx) => {
 
   });
 
+  await ctx.test('end token', async ctx => {
+
+    assert.equal(
+      matchUnits(
+        toUnits(''),
+        {
+          type: 'end',
+        } satisfies UnitMatcher,
+      ),
+      0,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('1'),
+        {
+          type: 'end',
+        } satisfies UnitMatcher,
+      ),
+      -1,
+    );
+
+  });
+
+  await ctx.test('alternate', async ctx => {
+
+    assert.equal(
+      matchUnits(
+        toUnits('*'),
+        {
+          type: 'alternate',
+          options: [
+            {type:'symbol', symbol:'*'},
+            {type:'symbol', symbol:'/'},
+          ],
+        } satisfies UnitMatcher,
+      ),
+      1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('%'),
+        {
+          type: 'alternate',
+          options: [
+            {type:'symbol', symbol:'*'},
+            {type:'symbol', symbol:'/'},
+          ],
+        } satisfies UnitMatcher,
+      ),
+      -1,
+    );
+
+  });
+
+  await ctx.test('sequence', async ctx => {
+
+    assert.equal(
+      matchUnits(
+        toUnits('*/%'),
+        {
+          type: 'sequence',
+          sequence: [
+            {type:'symbol', symbol:'*'},
+            {type:'symbol', symbol:'/'},
+          ],
+        } satisfies UnitMatcher,
+      ),
+      2,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('/*%'),
+        {
+          type: 'sequence',
+          sequence: [
+            {type:'symbol', symbol:'%'},
+            {type:'symbol', symbol:'*'},
+          ],
+        } satisfies UnitMatcher,
+      ),
+      -1,
+    );
+
+  });
+
+  await ctx.test('repeat', async ctx => {
+
+    assert.equal(
+      matchUnits(
+        toUnits('***'),
+        {
+          type: 'repeat',
+          inner: {type:'symbol', symbol:'*'},
+          min: 0,
+          max: Infinity,
+        } satisfies UnitMatcher,
+      ),
+      3,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('***'),
+        {
+          type: 'repeat',
+          inner: {type:'symbol', symbol:'*'},
+          min: 0,
+          max: 2,
+        } satisfies UnitMatcher,
+      ),
+      2,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('***'),
+        {
+          type: 'repeat',
+          inner: {type:'symbol', symbol:'*'},
+          min: 5,
+          max: Infinity,
+        } satisfies UnitMatcher,
+      ),
+      -1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('~~~'),
+        {
+          type: 'repeat',
+          inner: {type:'symbol', symbol:'*'},
+          min: 0,
+          max: Infinity,
+        } satisfies UnitMatcher,
+      ),
+      0,
+    );
+
+  });
+
 });
