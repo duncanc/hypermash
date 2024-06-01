@@ -374,6 +374,7 @@ export namespace UnitMatcher {
   export type Repeat = {type:'repeat', min:number, max:number, inner:UnitMatcher};
   export type Sequence = {type:'sequence', sequence:UnitMatcher[]};
   export type Alternate = {type:'alternate', options:UnitMatcher[]};
+  export type Subset = {type:'subset', set:UnitMatcher[], min: number, max?: number};
   export type Symbol = {type:'symbol', symbol:string};
   export type Identifier = {type:'identifier' | 'hash' | 'at-identifier', match?: string | RegExp};
   export type Call = {type:'call', funcNameMatch: string | RegExp, params: UnitMatcher};
@@ -417,6 +418,7 @@ export type UnitMatcher = (
   | UnitMatcher.Repeat
   | UnitMatcher.Sequence
   | UnitMatcher.Alternate
+  | UnitMatcher.Subset
   | UnitMatcher.Symbol
   | UnitMatcher.Identifier
   | UnitMatcher.Call
@@ -559,6 +561,43 @@ export function matchUnits(
       for (const h of matcher.sequence) {
         i = matchUnits(units, h, oncapture, i);
         if (i === -1) break;
+      }
+      return i;
+    }
+    case 'subset': {
+      let i = start_i;
+      const set = matcher.set.slice();
+      const caps: {name?: string, capture:unknown}[] = [];
+      const oncapture2 = (capture: unknown, name?: string) => { caps.push({capture, name }); };
+      let item_i: number;
+      for (item_i = 0; item_i < matcher.min; item_i++) {
+        let new_i: number = -1;
+        for (let m_i = 0; m_i < set.length; m_i++) {
+          new_i = matchUnits(units, set[m_i], oncapture2, i);
+          if (new_i !== -1) {
+            set.splice(m_i, 1);
+            break;
+          }
+        }
+        if (new_i === -1) return -1;
+        i = new_i;
+      }
+      for (const { capture, name } of caps) {
+        oncapture(capture, name);
+      }
+      const max = matcher.max ?? Infinity;
+      while (item_i < max) {
+        let new_i: number = -1;
+        for (let m_i = 0; m_i < set.length; m_i++) {
+          new_i = matchUnits(units, set[m_i], oncapture2, i);
+          if (new_i !== -1) {
+            set.splice(m_i, 1);
+            break;
+          }
+        }
+        if (new_i === -1) break;
+        i = new_i;
+        item_i++;
       }
       return i;
     }

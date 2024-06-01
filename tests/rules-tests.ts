@@ -685,4 +685,76 @@ test('rules matching', async (ctx) => {
 
   });
 
+  await ctx.test('subset match', async ctx => {
+
+    assert.equal(
+      matchUnits(
+        toUnits('<>*<'),
+        {
+          type: 'subset',
+          set: [
+            {type:'symbol', symbol:'*'},
+            {type:'symbol', symbol:'>'},
+            {type:'symbol', symbol:'<'},
+          ],
+          min: 0,
+          max: Infinity,
+        } satisfies UnitMatcher,
+      ),
+      3,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('<>*<'),
+        {
+          type: 'subset',
+          set: [
+            {type:'symbol', symbol:'*'},
+            {type:'symbol', symbol:'>'},
+            {type:'symbol', symbol:'<'},
+          ],
+          min: 0,
+          max: 2,
+        } satisfies UnitMatcher,
+      ),
+      2,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('!!!!'),
+        {
+          type: 'subset',
+          set: [
+            {type:'symbol', symbol:'*'},
+            {type:'symbol', symbol:'>'},
+            {type:'symbol', symbol:'<'},
+          ],
+          min: 0,
+          max: Infinity,
+        } satisfies UnitMatcher,
+      ),
+      0,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('!!!!'),
+        {
+          type: 'subset',
+          set: [
+            {type:'symbol', symbol:'*'},
+            {type:'symbol', symbol:'>'},
+            {type:'symbol', symbol:'<'},
+          ],
+          min: 1,
+          max: Infinity,
+        } satisfies UnitMatcher,
+      ),
+      -1,
+    );
+
+  });
+
 });
