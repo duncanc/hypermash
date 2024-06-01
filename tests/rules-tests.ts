@@ -534,7 +534,7 @@ test('rules matching', async (ctx) => {
         toUnits(''),
         {
           type: 'any',
-        } satisfies UnitMatcher,
+          } satisfies UnitMatcher,
       ),
       -1,
     );
@@ -756,5 +756,147 @@ test('rules matching', async (ctx) => {
     );
 
   });
+
+  await ctx.test('identifier', async ctx => {
+
+    assert.equal(
+      matchUnits(
+        toUnits('ident'),
+        {
+          type: 'identifier',
+        },
+      ),
+      1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('ident'),
+        {
+          type: 'identifier',
+          match: '^ident',
+        },
+      ),
+      -1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('ident'),
+        {
+          type: 'identifier',
+          match: /^ident/,
+        },
+      ),
+      1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('ident'),
+        {
+          type: 'identifier',
+          match: 'ident',
+        },
+      ),
+      1,
+    );
+
+  });
+
+  await ctx.test('at-identifier', async ctx => {
+
+    assert.equal(
+      matchUnits(
+        toUnits('@ident'),
+        {
+          type: 'at-identifier',
+        },
+      ),
+      1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('@ident'),
+        {
+          type: 'at-identifier',
+          match: '^ident',
+        },
+      ),
+      -1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('@ident'),
+        {
+          type: 'at-identifier',
+          match: /^ident/,
+        },
+      ),
+      1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('@ident'),
+        {
+          type: 'at-identifier',
+          match: 'ident',
+        },
+      ),
+      1,
+    );
+
+  });
+
+  await ctx.test('hash', async ctx => {
+
+    assert.equal(
+      matchUnits(
+        toUnits('#ident'),
+        {
+          type: 'hash',
+        },
+      ),
+      1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('#ident'),
+        {
+          type: 'hash',
+          match: '^ident',
+        },
+      ),
+      -1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('#ident'),
+        {
+          type: 'hash',
+          match: /^ident/,
+        },
+      ),
+      1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('#ident'),
+        {
+          type: 'hash',
+          match: 'ident',
+        },
+      ),
+      1,
+    );
+
+  });
+
 
 });
