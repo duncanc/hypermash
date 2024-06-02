@@ -1089,4 +1089,68 @@ test('rules matching', async (ctx) => {
 
   });
 
+  await ctx.test('whitespace handling', async ctx => {
+
+    assert.equal(
+      matchUnits(
+        toUnits('+='),
+        {
+          type: 'sequence',
+          sequence: [
+            {type:'symbol', symbol:'+'},
+            {type:'zero-whitespace'},
+            {type:'symbol', symbol:'='},
+          ],
+        },
+      ),
+      2
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('+ ='),
+        {
+          type: 'sequence',
+          sequence: [
+            {type:'symbol', symbol:'+'},
+            {type:'zero-whitespace'},
+            {type:'symbol', symbol:'='},
+          ],
+        },
+      ),
+      -1
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('+ ='),
+        {
+          type: 'sequence',
+          sequence: [
+            {type:'symbol', symbol:'+'},
+            {type:'nonzero-whitespace'},
+            {type:'symbol', symbol:'='},
+          ],
+        },
+      ),
+      3
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('+='),
+        {
+          type: 'sequence',
+          sequence: [
+            {type:'symbol', symbol:'+'},
+            {type:'nonzero-whitespace'},
+            {type:'symbol', symbol:'='},
+          ],
+        },
+      ),
+      -1
+    );
+
+  });
+
 });
