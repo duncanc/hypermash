@@ -275,6 +275,12 @@ type NumericUnit = {
   unit?: string;
 };
 
+type UnicodeRangeUnit = {
+  type: 'unicode-range';
+  fromCodePoint: number;
+  toCodePoint: number;
+};
+
 type ContainerUnit = {
   type: 'curly' | 'square' | 'round';
   content: Unit[];
@@ -286,7 +292,7 @@ type CallUnit = {
   params: Unit[];
 }
 
-export type Unit = LiteralUnit | ContainerUnit | CallUnit | NumericUnit;
+export type Unit = LiteralUnit | ContainerUnit | CallUnit | NumericUnit | UnicodeRangeUnit;
 
 export function toUnits(
   src: string | Iterable<FlatToken> | Iterator<FlatToken>,
@@ -415,6 +421,10 @@ export function toUnits(
         context.push(token as NumericUnit);
         break;
       }
+      case 'unicode-range': {
+        context.push(token as UnicodeRangeUnit);
+        break;
+      }
       default: {
         context.push(token as LiteralUnit);
         break;
@@ -442,6 +452,7 @@ export namespace UnitMatcher {
   export type Container = {type: 'round' | 'square' | 'curly', contents: UnitMatcher};
   export type String = { type: 'string'; };
   export type Number = { type: 'number'; unit?: string | Set<string | false> | false; };
+  export type UnicodeRange = { type: 'unicode-range' };
 
   export type CaptureConstant = {type: 'capture-constant', name?: string, constant:unknown};
   export type CaptureArray = {type: 'capture-array', name?: string, inner:UnitMatcher};
@@ -486,6 +497,7 @@ export type UnitMatcher = (
   | UnitMatcher.Container
   | UnitMatcher.String
   | UnitMatcher.Number
+  | UnitMatcher.UnicodeRange
 
   | UnitMatcher.CaptureConstant
   | UnitMatcher.CaptureArray
@@ -737,6 +749,12 @@ export function matchUnits(
     }
     case 'string': {
       if (!units[start_i] || units[start_i].type !== 'string') {
+        return -1;
+      }
+      return start_i + 1;
+    }
+    case 'unicode-range': {
+      if (!units[start_i] || units[start_i].type !== 'unicode-range') {
         return -1;
       }
       return start_i + 1;

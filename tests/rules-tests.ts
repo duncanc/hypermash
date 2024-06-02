@@ -598,6 +598,18 @@ test('rules matching', async (ctx) => {
     );
   });
 
+  await ctx.test('unicode range', async ctx => {
+    assert.equal(
+      matchUnits(
+        toUnits('U+fff'),
+        {
+          type: 'unicode-range'
+        }
+      ),
+      1,
+    );
+  });
+
   await ctx.test('numbers', async ctx => {
 
     assert.equal(
