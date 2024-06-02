@@ -39,7 +39,7 @@ const tokenPattern = new RegExp([
   /[^]/.source, // any single character not already matched
 ].join('|'), 'gyu');
 
-namespace FlatToken {
+export namespace FlatToken {
 
   export type Content = {
     type: (
