@@ -1185,4 +1185,197 @@ test('rules matching', async (ctx) => {
 
   });
 
+  await ctx.test('capture constant', async ctx => {
+    let capture: unknown = undefined;
+    assert.equal(
+      matchUnits(
+        toUnits(''),
+        {
+          type: 'capture-constant',
+          constant: true,
+        },
+        cap => { capture = cap; },
+      ),
+      0,
+    );
+    assert.equal(capture, true);
+  });
+
+  await ctx.test('capture unit', async ctx => {
+    let capture: unknown = undefined;
+    assert.equal(
+      matchUnits(
+        toUnits('3'),
+        {
+          type: 'capture-unit',
+        },
+        cap => { capture = cap; },
+      ),
+      1,
+    );
+    assert.deepEqual(capture, {
+      type: 'number',
+      value: 3,
+    } satisfies Unit.Numeric);
+  });
+
+  await ctx.test('capture content', async ctx => {
+
+    await ctx.test('capture number', async ctx => {
+      let capture: unknown = undefined;
+      assert.equal(
+        matchUnits(
+          toUnits('3'),
+          {
+            type: 'capture-content',
+          },
+          cap => { capture = cap; },
+        ),
+        1,
+      );
+      assert.equal(capture, 3);
+    });
+
+    await ctx.test('capture string', async ctx => {
+      let capture: unknown = undefined;
+      assert.equal(
+        matchUnits(
+          toUnits('"hello"'),
+          {
+            type: 'capture-content',
+          },
+          cap => { capture = cap; },
+        ),
+        1,
+      );
+      assert.equal(capture, "hello");
+    });
+
+    await ctx.test('capture identifier', async ctx => {
+      let capture: unknown = undefined;
+      assert.equal(
+        matchUnits(
+          toUnits('hello'),
+          {
+            type: 'capture-content',
+          },
+          cap => { capture = cap; },
+        ),
+        1,
+      );
+      assert.equal(capture, "hello");
+    });
+
+    await ctx.test('capture symbol', async ctx => {
+      let capture: unknown = undefined;
+      assert.equal(
+        matchUnits(
+          toUnits('='),
+          {
+            type: 'capture-content',
+          },
+          cap => { capture = cap; },
+        ),
+        1,
+      );
+      assert.equal(capture, "=");
+    });
+
+  });
+
+  await ctx.test('capture array', async ctx => {
+    let capture: unknown = undefined;
+    assert.equal(
+      matchUnits(
+        toUnits('1 2 3'),
+        {
+          type: 'capture-array',
+          inner: {
+            type: "repeat",
+            inner: {
+              type: 'capture-content',
+              inner: {
+                type: 'number'
+              },
+            },
+            min: 0,
+            max: Infinity,
+          }
+        },
+        cap => { capture = cap; },
+      ),
+      5,
+    );
+    assert.deepEqual(capture, [1, 2, 3]);
+  });
+
+  await ctx.test('capture object', async ctx => {
+    let capture: unknown = undefined;
+    assert.equal(
+      matchUnits(
+        toUnits('1 2 3'),
+        {
+          type: 'capture-object',
+          inner: {
+            type: "sequence",
+            sequence: [
+              {
+                type: 'capture-content',
+                inner: {
+                  type: 'number'
+                },
+                name: 'a',
+              },
+              {
+                type: 'capture-content',
+                inner: {
+                  type: 'number'
+                },
+                name: 'b',
+              },
+              {
+                type: 'capture-content',
+                inner: {
+                  type: 'number'
+                },
+                name: 'c',
+              },
+            ],
+          }
+        },
+        cap => { capture = cap; },
+      ),
+      5,
+    );
+    assert.deepEqual(capture, Object.assign(Object.create(null), {a:1, b:2, c:3}));
+  });
+
+  await ctx.test('capture reduce', async ctx => {
+    let capture: unknown = undefined;
+    assert.equal(
+      matchUnits(
+        toUnits('1 2 3'),
+        {
+          type: 'capture-reduce',
+          inner: {
+            type: "repeat",
+            inner: {
+              type: 'capture-content',
+              inner: {
+                type: 'number'
+              },
+            },
+            min: 0,
+            max: Infinity,
+          },
+          initialValue: 0,
+          reduce: (a, b) => (a as number) + (b as number),
+        },
+        cap => { capture = cap; },
+      ),
+      5,
+    );
+    assert.deepEqual(capture, 6);
+  });
+
 });
