@@ -565,6 +565,87 @@ test('rules matching', async (ctx) => {
 
   });
 
+  await ctx.test('symbols', async ctx => {
+    assert.equal(
+      matchUnits(
+        toUnits('*'),
+        {
+          type: 'symbol',
+          symbol: '*'
+        }
+      ),
+      1,
+    );
+  });
+
+  await ctx.test('numbers', async ctx => {
+
+    assert.equal(
+      matchUnits(
+        toUnits('3'),
+        {
+          type: 'number',
+        }
+      ),
+      1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('3px'),
+        {
+          type: 'number',
+        }
+      ),
+      -1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('3px'),
+        {
+          type: 'number',
+          unit: 'px',
+        }
+      ),
+      1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('3'),
+        {
+          type: 'number',
+          unit: 'px',
+        }
+      ),
+      -1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('3%'),
+        {
+          type: 'number',
+          unit: new Set(['px', 'in', '%', 'fr']),
+        }
+      ),
+      1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('3em'),
+        {
+          type: 'number',
+          unit: new Set(['px', 'in', '%', 'fr']),
+        }
+      ),
+      -1,
+    );
+
+  });
+
   await ctx.test('alternate', async ctx => {
 
     assert.equal(
