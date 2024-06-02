@@ -39,24 +39,42 @@ const tokenPattern = new RegExp([
   /[^]/.source, // any single character not already matched
 ].join('|'), 'gyu');
 
-type ContentToken = {
-  type: 'comment' | 'whitespace' | 'string' | 'identifier' | 'at-identifier' | 'hash' | 'symbol' | 'call-open' | 'url';
-  content: string;
+namespace FlatToken {
+
+  export type Content = {
+    type: (
+      | 'comment'
+      | 'whitespace'
+      | 'string'
+      | 'identifier'
+      | 'at-identifier'
+      | 'hash'
+      | 'symbol'
+      | 'call-open'
+      | 'url'
+    );
+    content: string;
+  };
+
+  export type Numeric = {
+    type: 'number';
+    value: number;
+    unit?: string;
+  };
+
+  export type UnicodeRange = {
+    type: 'unicode-range';
+    fromCodePoint: number;
+    toCodePoint: number;
+  };
+
 };
 
-type NumericToken = {
-  type: 'number';
-  value: number;
-  unit?: string;
-};
-
-type UnicodeRangeToken = {
-  type: 'unicode-range';
-  fromCodePoint: number;
-  toCodePoint: number;
-};
-
-export type FlatToken = ContentToken | NumericToken | UnicodeRangeToken;
+export type FlatToken = (
+  | FlatToken.Content
+  | FlatToken.Numeric
+  | FlatToken.UnicodeRange
+);
 
 const escapeReplace = (str: string) => {
   const hexMatch = str.match(/^\\([0-9a-fA-F]+)/);
@@ -263,36 +281,45 @@ export function *eachToken(text: string): Generator<FlatToken> {
   }
 }
 
+export namespace Unit {
 
-type LiteralUnit = {
-  type: 'comment' | 'whitespace' | 'string' | 'identifier' | 'at-identifier' | 'hash' | 'symbol';
-  content: string;
+  export type Literal = {
+    type: 'comment' | 'whitespace' | 'string' | 'identifier' | 'at-identifier' | 'hash' | 'symbol';
+    content: string;
+  };
+
+  export type Numeric = {
+    type: 'number';
+    value: number;
+    unit?: string;
+  };
+
+  export type UnicodeRange = {
+    type: 'unicode-range';
+    fromCodePoint: number;
+    toCodePoint: number;
+  };
+
+  export type Container = {
+    type: 'curly' | 'square' | 'round';
+    content: Unit[];
+  };
+
+  export type Call = {
+    type: 'call';
+    funcName: string;
+    params: Unit[];
+  }
+
 };
 
-type NumericUnit = {
-  type: 'number';
-  value: number;
-  unit?: string;
-};
-
-type UnicodeRangeUnit = {
-  type: 'unicode-range';
-  fromCodePoint: number;
-  toCodePoint: number;
-};
-
-type ContainerUnit = {
-  type: 'curly' | 'square' | 'round';
-  content: Unit[];
-};
-
-type CallUnit = {
-  type: 'call';
-  funcName: string;
-  params: Unit[];
-}
-
-export type Unit = LiteralUnit | ContainerUnit | CallUnit | NumericUnit | UnicodeRangeUnit;
+export type Unit = (
+  | Unit.Literal
+  | Unit.Container
+  | Unit.Call
+  | Unit.Numeric
+  | Unit.UnicodeRange
+);
 
 export function toUnits(
   src: string | Iterable<FlatToken> | Iterator<FlatToken>,
@@ -315,7 +342,7 @@ export function toUnits(
     const token = step.value;
     switch (token.type) {
       case 'call-open': {
-        const newCall: CallUnit = {
+        const newCall: Unit.Call = {
           type: 'call',
           funcName: token.content,
           params: [],
@@ -328,7 +355,7 @@ export function toUnits(
       case 'symbol': {
         switch (token.content) {
           case '(': {
-            const newBlock: ContainerUnit = {
+            const newBlock: Unit.Container = {
               type: 'round',
               content: [],
             };
@@ -348,7 +375,7 @@ export function toUnits(
             break;
           }
           case '[': {
-            const newBlock: ContainerUnit = {
+            const newBlock: Unit.Container = {
               type: 'square',
               content: [],
             };
@@ -368,7 +395,7 @@ export function toUnits(
             break;
           }
           case '{': {
-            const newBlock: ContainerUnit = {
+            const newBlock: Unit.Container = {
               type: 'curly',
               content: [],
             };
@@ -388,7 +415,7 @@ export function toUnits(
             break;
           }
           default: {
-            context.push(token as LiteralUnit);
+            context.push(token as Unit.Literal);
             break;
           }
         }
@@ -409,24 +436,24 @@ export function toUnits(
       }
       case 'whitespace': {
         if (ignoreWhitespace) continue;
-        context.push(token as LiteralUnit);
+        context.push(token as Unit.Literal);
         break;
       }
       case 'comment': {
         if (ignoreComments) continue;
-        context.push(token as LiteralUnit);
+        context.push(token as Unit.Literal);
         break;
       }
       case 'number': {
-        context.push(token as NumericUnit);
+        context.push(token as Unit.Numeric);
         break;
       }
       case 'unicode-range': {
-        context.push(token as UnicodeRangeUnit);
+        context.push(token as Unit.UnicodeRange);
         break;
       }
       default: {
-        context.push(token as LiteralUnit);
+        context.push(token as Unit.Literal);
         break;
       }
     }
