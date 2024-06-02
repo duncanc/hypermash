@@ -658,9 +658,13 @@ export function matchUnits(
     }
     case 'sequence': {
       let i = start_i;
+      const caps: {name?: string, capture: unknown}[] = [];
       for (const h of matcher.sequence) {
-        i = matchUnits(units, h, oncapture, i);
-        if (i === -1) break;
+        i = matchUnits(units, h, (capture, name) => caps.push({capture, name}), i);
+        if (i === -1) return -1;
+      }
+      for (const { capture, name } of caps) {
+        oncapture(capture, name);
       }
       return i;
     }
@@ -816,14 +820,14 @@ export function matchUnits(
       const end_i = matchUnits(units, cMatcher, () => {}, start_i);
       if (end_i === -1) return -1;
       if (end_i === start_i) {
-        oncapture('');
+        oncapture('', matcher.name);
         return end_i;
       }
       if (end_i === start_i + 1) {
-        oncapture(getUnitContent(units[start_i]));
+        oncapture(getUnitContent(units[start_i]), matcher.name);
         return end_i;
       }
-      oncapture(units.slice(start_i, end_i).map(getUnitContent).join(''));
+      oncapture(units.slice(start_i, end_i).map(getUnitContent).join(''), matcher.name);
       return end_i;
     }
     default: {
