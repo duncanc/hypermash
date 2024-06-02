@@ -380,7 +380,7 @@ export namespace UnitMatcher {
   export type Call = {type:'call', funcNameMatch: string | RegExp, params: UnitMatcher};
   export type Container = {type: 'round' | 'square' | 'curly', contents: UnitMatcher};
   export type String = { type: 'string'; };
-  export type Number = { type: 'number'; };
+  export type Number = { type: 'number'; unit?: string | Set<string | false> | false; };
 
   export type CaptureConstant = {type: 'capture-constant', name?: string, constant:unknown};
   export type CaptureArray = {type: 'capture-array', name?: string, inner:UnitMatcher};
@@ -681,8 +681,27 @@ export function matchUnits(
       return start_i + 1;
     }
     case 'number': {
-      if (!units[start_i] || units[start_i].type !== 'number') {
+      const unit = units[start_i];
+      if (!unit || unit.type !== 'number') {
         return -1;
+      }
+      if (matcher.unit) {
+        if (typeof matcher.unit === 'string') {
+          if (unit.unit !== matcher.unit) return -1;
+        }
+        else if (matcher.unit instanceof Set) {
+          if (!matcher.unit.has(unit.unit ?? false)) {
+            return -1;
+          }
+        }
+        else if (matcher.unit === false) {
+          if (matcher.unit != null) {
+            return -1;
+          }
+        }
+      }
+      else {
+        if (unit.unit != null) return -1;
       }
       return start_i + 1;
     }
