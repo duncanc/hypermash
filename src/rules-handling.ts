@@ -39,7 +39,7 @@ const tokenPattern = new RegExp([
   /[^]/.source, // any single character not already matched
 ].join('|'), 'gyu');
 
-export namespace FlatToken {
+export namespace Token {
 
   export type Content = {
     type: (
@@ -70,10 +70,10 @@ export namespace FlatToken {
 
 };
 
-export type FlatToken = (
-  | FlatToken.Content
-  | FlatToken.Numeric
-  | FlatToken.UnicodeRange
+export type Token = (
+  | Token.Content
+  | Token.Numeric
+  | Token.UnicodeRange
 );
 
 const escapeReplace = (str: string) => {
@@ -92,7 +92,7 @@ const escapeReplace = (str: string) => {
   return str.slice(1);
 };
 
-export function *eachToken(text: string): Generator<FlatToken> {
+export function *eachToken(text: string): Generator<Token> {
   const rx = new RegExp(tokenPattern);
   for (let m = rx.exec(text); m; m = rx.exec(text)) {
     switch (m[0][0]) {
@@ -322,7 +322,7 @@ export type Unit = (
 );
 
 export function toUnits(
-  src: string | Iterable<FlatToken> | Iterator<FlatToken>,
+  src: string | Iterable<Token> | Iterator<Token>,
   {
     ignoreWhitespace = false,
     ignoreComments = false,

@@ -1,11 +1,11 @@
 
 import { test, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { eachToken, FlatToken, matchUnits, toUnits, Unit, UnitMatcher } from '../src/rules-handling';
+import { eachToken, Token, matchUnits, toUnits, Unit, UnitMatcher } from '../src/rules-handling';
 
 test('rules tokenization', async (ctx) => {
 
-  const assertEqualTokens = (text: string, tokens: FlatToken[]) => {
+  const assertEqualTokens = (text: string, tokens: Token[]) => {
     assert.deepEqual([...eachToken(text)], tokens);
   }
 
