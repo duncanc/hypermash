@@ -27,6 +27,7 @@ const tokenPattern = new RegExp([
   /[ \t\r\n\f]+/.source,
   // match[1]: url() token
   /(?:\\?[uU]|\\0{0,4}[57]5(?:[ \t\n\f]|\r\n?)?)(?:\\?[rR]|\\0{0,4}[57]2(?:[ \t\n\f]|\r\n?)?)(?:\\?[lL]|\\0{0,4}[46][cC](?:[ \t\n\f]|\r\n?)?)\([ \t\r\n\f]*([^"'()\\ \t\r\n\f\x00-\x08\x0E-\x1F\x7F]+)[ \t\r\n\f]*\)/.source,
+  /[uU]\+[0-9a-fA-F?]{1,6}(?:-[0-9a-fA-F]{1,6})?/.source,
   // match[2]: ident-is-call token
   identPattern.source + '([(])?',
   '@' + identPattern.source,
@@ -49,7 +50,13 @@ type NumericToken = {
   unit?: string;
 };
 
-export type FlatToken = ContentToken | NumericToken;
+type UnicodeRangeToken = {
+  type: 'unicode-range';
+  fromCodePoint: number;
+  toCodePoint: number;
+};
+
+export type FlatToken = ContentToken | NumericToken | UnicodeRangeToken;
 
 const escapeReplace = (str: string) => {
   const hexMatch = str.match(/^\\([0-9a-fA-F]+)/);
@@ -94,6 +101,60 @@ export function *eachToken(text: string): Generator<FlatToken> {
         const content = m[0].slice(1, -1).replace(stringEscapePattern, escapeReplace);
         yield {type:'string', content};
         continue;
+      }
+      case 'u': case 'U': {
+        if (m[0][1] === '+') {
+          const parts = m[0].slice(2).split('-');
+          if (parts.length === 2) {
+            if (parts[0].indexOf('?') !== -1) {
+              throw new SyntaxError('invalid unicode range');
+            }
+            const fromCodePoint = parseInt(parts[0], 16);
+            if (fromCodePoint > 0x10ffff) {
+              throw new SyntaxError('unicode codepoint out of range');
+            }
+            const toCodePoint = parseInt(parts[1], 16);
+            if (toCodePoint > 0x10ffff) {
+              throw new SyntaxError('unicode codepoint out of range');
+            }
+            if (toCodePoint < fromCodePoint) {
+              throw new SyntaxError('invalid unicode codepoint range');
+            }
+            yield {
+              type: 'unicode-range',
+              fromCodePoint,
+              toCodePoint,
+            };
+          }
+          else {
+            const parts2 = parts[0].match(/^([^\?]*)(\?*)$/);
+            if (!parts2) {
+              throw new SyntaxError('invalid unicode codepoint range');
+            }
+            if (parts2[2].length === 0) {
+              const codePoint = parseInt(parts2[1], 16);
+              if (codePoint > 0x10ffff) {
+                throw new SyntaxError('unicode codepoint out of range');
+              }
+              yield {
+                type: 'unicode-range',
+                fromCodePoint: codePoint,
+                toCodePoint: codePoint,
+              };
+            }
+            else {
+              const fromCodePoint = parseInt(parts[0].replace(/\?/g, '0'), 16);
+              const toCodePoint = parseInt(parts[0].replace(/\?+$/, v => '10ffff'.slice(-v.length)), 16);
+              yield {
+                type: 'unicode-range',
+                fromCodePoint,
+                toCodePoint,
+              };
+            }
+          }
+          continue;
+        }
+        break;
       }
       case '#': {
         if (m[0].length === 1) {

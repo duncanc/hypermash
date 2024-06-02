@@ -303,6 +303,26 @@ test('rules tokenization', async (ctx) => {
 
   });
 
+  await ctx.test('unicode ranges', async ctx => {
+
+    assertEqualTokens('U+10-1000', [
+      {type:'unicode-range', fromCodePoint:0x10, toCodePoint:0x1000},
+    ]);
+
+    assertEqualTokens('U+3fb', [
+      {type:'unicode-range', fromCodePoint:0x3fb, toCodePoint:0x3fb},
+    ]);
+
+    assertEqualTokens('U+3??', [
+      {type:'unicode-range', fromCodePoint:0x300, toCodePoint:0x3ff},
+    ]);
+
+    assertEqualTokens('U+??????', [
+      {type:'unicode-range', fromCodePoint:0x0, toCodePoint:0x10ffff},
+    ]);
+
+  });
+
 });
 
 test('rules nested structure', async (ctx) => {
