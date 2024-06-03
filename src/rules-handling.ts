@@ -482,6 +482,7 @@ export namespace UnitMatcher {
   export type String = { type: 'string'; };
   export type Number = { type: 'number'; unit?: string | Set<string | false> | false; };
   export type UnicodeRange = { type: 'unicode-range' };
+  export type Placeholder = { type: 'placeholder', placeholder: string };
 
   export type CaptureConstant = {type: 'capture-constant', name?: string, constant:unknown};
   export type CaptureArray = {type: 'capture-array', name?: string, inner:UnitMatcher};
@@ -529,6 +530,7 @@ export type UnitMatcher = (
   | UnitMatcher.String
   | UnitMatcher.Number
   | UnitMatcher.UnicodeRange
+  | UnitMatcher.Placeholder
 
   | UnitMatcher.CaptureConstant
   | UnitMatcher.CaptureArray
@@ -610,6 +612,9 @@ export function matchUnits(
     }
     case 'failure': {
       return -1;
+    }
+    case 'placeholder': {
+      throw new Error('placeholders must be replaced before matching');
     }
     case 'call': {
       const unit = units[start_i];
@@ -843,6 +848,93 @@ export function matchUnits(
     default: {
       return -1;
     }
+  }
+}
+
+function replacePlaceholders(matcher: UnitMatcher, placeholders: Map<string, UnitMatcher>): UnitMatcher {
+  switch (matcher.type) {
+    case 'placeholder': {
+      const replace = placeholders.get(matcher.placeholder);
+      if (!replace) {
+        throw new Error('placeholder not found: ' + matcher.placeholder);
+      }
+      return replace;
+    }
+    case 'alternate': {
+      let option_i: number;
+      for (option_i = 0; option_i < matcher.options.length; option_i++) {
+        const replaced = replacePlaceholders(matcher.options[option_i], placeholders);
+        if (replaced !== matcher.options[option_i]) {
+          const options = matcher.options.slice(0, option_i);
+          options.push(replaced);
+          for (option_i++; option_i < matcher.options.length; option_i++) {
+            options.push(replacePlaceholders(matcher.options[option_i], placeholders));
+          }
+          return {type:'alternate', options};
+        }
+      }
+      return matcher;
+    }
+    case 'sequence': {
+      let option_i: number;
+      for (option_i = 0; option_i < matcher.sequence.length; option_i++) {
+        const replaced = replacePlaceholders(matcher.sequence[option_i], placeholders);
+        if (replaced !== matcher.sequence[option_i]) {
+          const sequence = matcher.sequence.slice(0, option_i);
+          sequence.push(replaced);
+          for (option_i++; option_i < matcher.sequence.length; option_i++) {
+            sequence.push(replacePlaceholders(matcher.sequence[option_i], placeholders));
+          }
+          return {...matcher, sequence};
+        }
+      }
+      return matcher;
+    }
+    case 'call': {
+      const params = replacePlaceholders(matcher.params, placeholders);
+      if (params !== matcher.params) {
+        return {
+          ...matcher,
+          params,
+        };
+      }
+      return matcher;
+    }
+    case 'curly': case 'round': case 'square': {
+      const contents = replacePlaceholders(matcher.contents, placeholders);
+      if (contents !== matcher.contents) {
+        return {
+          ...matcher,
+          contents,
+        };
+      }
+      return matcher;
+    }
+    case 'subset': {
+      let option_i: number;
+      for (option_i = 0; option_i < matcher.set.length; option_i++) {
+        const replaced = replacePlaceholders(matcher.set[option_i], placeholders);
+        if (replaced !== matcher.set[option_i]) {
+          const set = matcher.set.slice(0, option_i);
+          set.push(replaced);
+          for (option_i++; option_i < matcher.set.length; option_i++) {
+            set.push(replacePlaceholders(matcher.set[option_i], placeholders));
+          }
+          return {...matcher, set};
+        }
+      }
+      return matcher;
+    }
+    case 'capture-array': case 'capture-object': case 'capture-reduce': case 'capture-transform': case 'capture-unit': case 'capture-content': case 'repeat': {
+      if (matcher.inner) {
+        const inner = replacePlaceholders(matcher.inner, placeholders);
+        if (inner !== matcher.inner) {
+          return {...matcher, inner};
+        }
+      }
+      return matcher;
+    }
+    default: return matcher;
   }
 }
 
