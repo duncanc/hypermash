@@ -585,6 +585,51 @@ test('rules matching', async (ctx) => {
 
   });
 
+  await ctx.test('success and failure', async ctx => {
+
+    assert.equal(
+      matchUnits(
+        toUnits('3'),
+        {
+          type: 'success',
+        } satisfies UnitMatcher,
+      ),
+      0,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits(''),
+        {
+          type: 'success',
+        } satisfies UnitMatcher,
+      ),
+      0,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits('3'),
+        {
+          type: 'failure',
+        } satisfies UnitMatcher,
+      ),
+      -1,
+    );
+
+    assert.equal(
+      matchUnits(
+        toUnits(''),
+        {
+          type: 'failure',
+        } satisfies UnitMatcher,
+      ),
+      -1,
+    );
+
+  });
+
+
   await ctx.test('symbols', async ctx => {
     assert.equal(
       matchUnits(

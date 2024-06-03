@@ -469,6 +469,8 @@ export namespace UnitMatcher {
   export type NonZeroWhitespace = {type: 'nonzero-whitespace'};
   export type End = {type:'end'};
   export type Any = {type:'any'};
+  export type Success = {type:'success'};
+  export type Failure = {type:'failure'};
   export type Repeat = {type:'repeat', min:number, max:number, inner:UnitMatcher};
   export type Sequence = {type:'sequence', sequence:UnitMatcher[]};
   export type Alternate = {type:'alternate', options:UnitMatcher[]};
@@ -514,6 +516,8 @@ export type UnitMatcher = (
   | UnitMatcher.ZeroWhitespace
   | UnitMatcher.End
   | UnitMatcher.Any
+  | UnitMatcher.Success
+  | UnitMatcher.Failure
   | UnitMatcher.Repeat
   | UnitMatcher.Sequence
   | UnitMatcher.Alternate
@@ -600,6 +604,12 @@ export function matchUnits(
         }
       }
       return start_i + 1;
+    }
+    case 'success': {
+      return start_i;
+    }
+    case 'failure': {
+      return -1;
     }
     case 'call': {
       const unit = units[start_i];
