@@ -858,3 +858,219 @@ function getUnitContent(unit: Unit): string | number {
     }
   }
 }
+
+const parenthesized: UnitMatcher.Container = {
+  type: 'round',
+  contents: {
+    // placeholder to be replaced later
+    type: 'any',
+  },
+};
+
+const atomic = {
+  type: 'capture-transform',
+  transform(m, min, max) {
+    if (max === true) {
+      max = min;
+    }
+    if (min === 1 && max === 1) {
+      return m;
+    }
+    return {
+      type: 'repeat',
+      min: min as number,
+      max: max as number,
+      inner: m as UnitMatcher,
+    } satisfies UnitMatcher;
+  },
+  inner: {
+    type: 'sequence',
+    sequence: [
+      {
+        type: 'alternate',
+        options: [
+          parenthesized,
+        ],
+      },
+      {
+        type: 'alternate',
+        options: [
+          {
+            type: 'sequence',
+            sequence: [
+              {type: 'symbol', symbol: '?'},
+              {type: 'capture-constant', constant: 0},
+              {type: 'capture-constant', constant: 1},
+            ],
+          },
+          {
+            type: 'sequence',
+            sequence: [
+              {type: 'symbol', symbol: '*'},
+              {type: 'capture-constant', constant: 0},
+              {type: 'capture-constant', constant: Infinity},
+            ],
+          },
+          {
+            type: 'sequence',
+            sequence: [
+              {type: 'symbol', symbol: '+'},
+              {type: 'capture-constant', constant: 1},
+              {type: 'capture-constant', constant: Infinity},
+            ],
+          },
+          {
+            type: 'curly',
+            contents: {
+              type: 'sequence',
+              sequence: [
+                {type: 'capture-content', inner: {type: 'number'}},
+                {
+                  type: 'alternate',
+                  options: [
+                    {
+                      type: 'sequence',
+                      sequence: [
+                        {type:'symbol', symbol:','},
+                        {
+                          type: 'alternate',
+                          options: [
+                            {type: 'capture-content', inner: {type:'number'}},
+                            {type: 'capture-constant', constant: Infinity},
+                          ],
+                        },
+                      ],
+                    },
+                    {type:'capture-constant', constant:true}
+                  ],
+                },
+                {type:'end'},
+              ]
+            },
+          },
+          {
+            type: 'sequence',
+            sequence: [
+              {type: 'capture-constant', constant: 1},
+              {type: 'capture-constant', constant: 1},
+            ],
+          },
+        ],
+      },
+    ],
+  },
+} satisfies UnitMatcher;
+
+const altRule: UnitMatcher = {
+  type: 'capture-transform',
+  transform(...captures) {
+    if (captures.length === 1) {
+      return captures[0];
+    }
+    return {
+      type: 'sequence',
+      sequence: captures as UnitMatcher[],
+    } satisfies UnitMatcher;
+  },
+  inner: {
+    type: 'repeat',
+    min: 0,
+    max: Infinity,
+    inner: atomic,
+  },
+};
+
+const capRule: UnitMatcher = {
+  type: 'capture-transform',
+  transform(...captures): UnitMatcher {
+    if (captures.length === 1) {
+      return captures[0] as UnitMatcher;
+    }
+    return {
+      type: 'alternate',
+      options: captures as UnitMatcher[],
+    };
+  },
+  inner: {
+    type: 'sequence',
+    sequence: [
+      altRule,
+      {
+        type: 'repeat',
+        min: 0,
+        max: Infinity,
+        inner: {
+          type: 'sequence',
+          sequence: [
+            {type:'symbol', symbol:'|'},
+            altRule,
+          ],
+        },
+      }
+    ],
+  },
+};
+
+parenthesized.contents = capRule;
+
+const ruleUnit: UnitMatcher = {
+  type: 'capture-object',
+  inner: {
+    type: 'sequence',
+    sequence: [
+      {
+        type: 'capture-content',
+        inner: {
+          type: 'identifier',
+        },
+        name: 'name',
+      },
+      {
+        type: 'symbol',
+        symbol: ':',
+      },
+    ],
+  },
+};
+
+const ruleSetUnit: UnitMatcher = {
+  type: 'capture-array',
+  inner: {
+    type: 'sequence',
+    sequence: [
+      {
+        type: 'repeat',
+        min: 0,
+        max: 1,
+        inner: {
+          type: 'sequence',
+          sequence: [
+            ruleUnit,
+            {
+              type: 'repeat',
+              min: 0,
+              max: Infinity,
+              inner: {
+                type: 'sequence',
+                sequence: [
+                  {type: 'symbol', symbol: ';'},
+                  ruleUnit
+                ],
+              },
+            },
+            {
+              type: 'repeat',
+              min: 0,
+              max: 1,
+              inner: {
+                type: 'symbol',
+                symbol: ';',
+              },
+            },
+          ],
+        },
+      },
+      {type:'end'}
+    ],
+  },
+};
