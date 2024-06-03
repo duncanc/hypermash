@@ -889,6 +889,19 @@ const atomic = {
       {
         type: 'alternate',
         options: [
+          {
+            type: 'capture-transform',
+            transform(name) {
+              return {
+                type: 'identifier',
+                match: name as string,
+              } satisfies UnitMatcher;
+            },
+            inner: {
+              type: 'capture-content',
+              inner: {type:'identifier'},
+            }
+          },
           parenthesized,
         ],
       },
@@ -1029,11 +1042,19 @@ const ruleUnit: UnitMatcher = {
         type: 'symbol',
         symbol: ':',
       },
+      {
+        type: 'capture-transform',
+        name: 'matcher',
+        transform(capture) {
+          return capture;
+        },
+        inner: capRule,
+      }
     ],
   },
 };
 
-const ruleSetUnit: UnitMatcher = {
+export const ruleSetUnit: UnitMatcher = {
   type: 'capture-array',
   inner: {
     type: 'sequence',

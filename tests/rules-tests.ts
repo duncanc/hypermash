@@ -1,7 +1,7 @@
 
 import { test, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { eachToken, Token, matchUnits, toUnits, Unit, UnitMatcher } from '../src/rules-handling';
+import { eachToken, Token, matchUnits, toUnits, Unit, UnitMatcher, ruleSetUnit } from '../src/rules-handling';
 
 test('rules tokenization', async (ctx) => {
 
@@ -1376,6 +1376,292 @@ test('rules matching', async (ctx) => {
       5,
     );
     assert.deepEqual(capture, 6);
+  });
+
+});
+
+test('rule grammar', async (ctx) => {
+
+  await ctx.test('minimal', async ctx => {
+    let capture: unknown = undefined;
+
+    assert.equal(
+      matchUnits(
+        toUnits('blob: bleeb'),
+        ruleSetUnit,
+        cap => { capture = cap; },
+      ),
+      4,
+    );
+
+    assert.deepEqual(
+      capture,
+      [
+        Object.assign(Object.create(null), {
+          name: 'blob',
+          matcher: {
+            type: 'identifier',
+            match: 'bleeb',
+          },
+        }),
+      ] satisfies {name:string, matcher:UnitMatcher}[],
+    );
+  });
+
+  await ctx.test('sequence', async ctx => {
+    let capture: unknown = undefined;
+
+    assert.equal(
+      matchUnits(
+        toUnits('blob: bleeb bub'),
+        ruleSetUnit,
+        cap => { capture = cap; },
+      ),
+      6,
+    );
+
+    assert.deepEqual(
+      capture,
+      [
+        Object.assign(Object.create(null), {
+          name: 'blob',
+          matcher: {
+            type: 'sequence',
+            sequence: [
+              {
+                type: 'identifier',
+                match: 'bleeb',
+              },
+              {
+                type: 'identifier',
+                match: 'bub',
+              },
+            ],
+          },
+        }),
+      ] satisfies {name:string, matcher:UnitMatcher}[],
+    );
+  });
+
+  await ctx.test('alternate', async ctx => {
+    let capture: unknown = undefined;
+
+    assert.equal(
+      matchUnits(
+        toUnits('blob: bleeb | bub'),
+        ruleSetUnit,
+        cap => { capture = cap; },
+      ),
+      8,
+    );
+
+    assert.deepEqual(
+      capture,
+      [
+        Object.assign(Object.create(null), {
+          name: 'blob',
+          matcher: {
+            type: 'alternate',
+            options: [
+              {
+                type: 'identifier',
+                match: 'bleeb',
+              },
+              {
+                type: 'identifier',
+                match: 'bub',
+              },
+            ],
+          } satisfies UnitMatcher,
+        }),
+      ] satisfies {name:string, matcher:UnitMatcher}[],
+    );
+  });
+
+  await ctx.test('optional', async ctx => {
+    let capture: unknown = undefined;
+
+    assert.equal(
+      matchUnits(
+        toUnits('blob: bleeb?'),
+        ruleSetUnit,
+        cap => { capture = cap; },
+      ),
+      5,
+    );
+
+    assert.deepEqual(
+      capture,
+      [
+        Object.assign(Object.create(null), {
+          name: 'blob',
+          matcher: {
+            type: 'repeat',
+            inner: {
+              type: 'identifier',
+              match: 'bleeb',
+            },
+            min: 0,
+            max: 1,
+          } satisfies UnitMatcher,
+        }),
+      ] satisfies {name:string, matcher:UnitMatcher}[],
+    );
+  });
+
+  await ctx.test('zero or more', async ctx => {
+    let capture: unknown = undefined;
+
+    assert.equal(
+      matchUnits(
+        toUnits('blob: bleeb*'),
+        ruleSetUnit,
+        cap => { capture = cap; },
+      ),
+      5,
+    );
+
+    assert.deepEqual(
+      capture,
+      [
+        Object.assign(Object.create(null), {
+          name: 'blob',
+          matcher: {
+            type: 'repeat',
+            inner: {
+              type: 'identifier',
+              match: 'bleeb',
+            },
+            min: 0,
+            max: Infinity,
+          } satisfies UnitMatcher,
+        }),
+      ] satisfies {name:string, matcher:UnitMatcher}[],
+    );
+  });
+
+  await ctx.test('one or more', async ctx => {
+    let capture: unknown = undefined;
+
+    assert.equal(
+      matchUnits(
+        toUnits('blob: bleeb+'),
+        ruleSetUnit,
+        cap => { capture = cap; },
+      ),
+      5,
+    );
+
+    assert.deepEqual(
+      capture,
+      [
+        Object.assign(Object.create(null), {
+          name: 'blob',
+          matcher: {
+            type: 'repeat',
+            inner: {
+              type: 'identifier',
+              match: 'bleeb',
+            },
+            min: 1,
+            max: Infinity,
+          } satisfies UnitMatcher,
+        }),
+      ] satisfies {name:string, matcher:UnitMatcher}[],
+    );
+  });
+
+  await ctx.test('exact repeat count', async ctx => {
+    let capture: unknown = undefined;
+
+    assert.equal(
+      matchUnits(
+        toUnits('blob: bleeb{3}'),
+        ruleSetUnit,
+        cap => { capture = cap; },
+      ),
+      5,
+    );
+
+    assert.deepEqual(
+      capture,
+      [
+        Object.assign(Object.create(null), {
+          name: 'blob',
+          matcher: {
+            type: 'repeat',
+            inner: {
+              type: 'identifier',
+              match: 'bleeb',
+            },
+            min: 3,
+            max: 3,
+          } satisfies UnitMatcher,
+        }),
+      ] satisfies {name:string, matcher:UnitMatcher}[],
+    );
+  });
+
+  await ctx.test('repeat range', async ctx => {
+    let capture: unknown = undefined;
+
+    assert.equal(
+      matchUnits(
+        toUnits('blob: bleeb{3,5}'),
+        ruleSetUnit,
+        cap => { capture = cap; },
+      ),
+      5,
+    );
+
+    assert.deepEqual(
+      capture,
+      [
+        Object.assign(Object.create(null), {
+          name: 'blob',
+          matcher: {
+            type: 'repeat',
+            inner: {
+              type: 'identifier',
+              match: 'bleeb',
+            },
+            min: 3,
+            max: 5,
+          } satisfies UnitMatcher,
+        }),
+      ] satisfies {name:string, matcher:UnitMatcher}[],
+    );
+  });
+
+  await ctx.test('open-ended range', async ctx => {
+    let capture: unknown = undefined;
+
+    assert.equal(
+      matchUnits(
+        toUnits('blob: bleeb{3,}'),
+        ruleSetUnit,
+        cap => { capture = cap; },
+      ),
+      5,
+    );
+
+    assert.deepEqual(
+      capture,
+      [
+        Object.assign(Object.create(null), {
+          name: 'blob',
+          matcher: {
+            type: 'repeat',
+            inner: {
+              type: 'identifier',
+              match: 'bleeb',
+            },
+            min: 3,
+            max: Infinity,
+          } satisfies UnitMatcher,
+        }),
+      ] satisfies {name:string, matcher:UnitMatcher}[],
+    );
   });
 
 });
