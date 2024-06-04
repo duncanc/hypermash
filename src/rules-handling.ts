@@ -851,7 +851,23 @@ export function matchUnits(
   }
 }
 
-function replacePlaceholders(matcher: UnitMatcher, placeholders: Map<string, UnitMatcher>): UnitMatcher {
+function replacePlaceholders(matcher: UnitMatcher, placeholders: Map<string, UnitMatcher>): UnitMatcher;
+function replacePlaceholders(matchers: Map<string, UnitMatcher>, placeholders: Map<string, UnitMatcher>): Map<string, UnitMatcher>;
+function replacePlaceholders(matcher: UnitMatcher | Map<string, UnitMatcher>, placeholders: Map<string, UnitMatcher>): UnitMatcher | Map<string, UnitMatcher> {
+  if (matcher instanceof Map) {
+    const result = new Map<string, UnitMatcher>();
+    for (const name of matcher.keys()) {
+      result.set(name, {} as UnitMatcher);
+    }
+    const combined = new Map<string, UnitMatcher>(placeholders);
+    for (const [name, value] of matcher) {
+      combined.set(name, value);
+    }
+    for (const [name, value] of result) {
+      Object.assign(value, replacePlaceholders(matcher.get(name)!, combined));
+    }
+    return result;
+  }
   switch (matcher.type) {
     case 'placeholder': {
       const replace = placeholders.get(matcher.placeholder);
