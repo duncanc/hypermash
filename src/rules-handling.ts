@@ -1027,6 +1027,33 @@ const atomic = {
               inner: {type:'identifier'},
             }
           },
+          {
+            type: 'capture-transform',
+            inner: {
+              type: 'sequence',
+              sequence: [
+                {
+                  type: 'capture-unit',
+                  inner: {
+                    type: 'call',
+                    funcNameMatch: /.*/,
+                    params: {type:'any'},
+                  }
+                },
+                {type: 'capture-context'},
+              ],
+            },
+            transform(_callUnit, _context) {
+              const callUnit = _callUnit as Unit.Call;
+              const context = _context as {functions:Map<string, (units: Unit[]) => UnitMatcher>};
+              const func = context.functions.get(callUnit.funcName);
+              if (!func) {
+                throw new Error('function not defined: ' + callUnit.funcName);
+              }
+              const result = func(callUnit.params);
+              return result;
+            },
+          },
           parenthesized,
         ],
       },
@@ -1220,3 +1247,129 @@ export const ruleSetUnit: UnitMatcher = {
     ],
   },
 };
+
+const defaultUnits = new Map<string, UnitMatcher>([
+  ['number', {
+    type: 'number',
+  }],
+  ['percentage', {
+    type: 'number',
+    unit: '%',
+  }],
+  ['string', {
+    type: 'string',
+  }],
+]);
+
+const splitComma = (units: Unit[]) => {
+  const split: Unit[][] = [];
+  let current: Unit[] = [];
+  split.push(current);
+  for (const unit of units) {
+    if (unit.type === 'symbol' && unit.content === ',') {
+      split.push(current = []);
+    }
+    else {
+      current.push(unit);
+    }
+  }
+  return split;
+};
+
+const defaultFunctions = new Map<string, (params: Unit[], context: unknown) => UnitMatcher>([
+  ['ID', (units) => {
+    if (units.length === 0) {
+      return {
+        type: 'identifier',
+      };
+    }
+    if (units.length === 1 && units[0].type === 'identifier') {
+      return {
+        type: 'identifier',
+        match: units[0].content,
+      };
+    }
+    throw new Error('invalid params');
+  }],
+  ['HASH', (units) => {
+    if (units.length === 1 && units[0].type === 'call' && units[0].funcName === 'MATCH') {
+      const match = units[0];
+      if (match.params.length === 1 && match.params[0].type === 'string') {
+        return {
+          type: 'hash',
+          match: new RegExp('^(?:' + match.params[0].content + ')$', 'u'),
+        };
+      }
+    }
+    throw new Error('invalid params');
+  }],
+  ['FN', (units, context) => {
+    if (units.length === 1 && units[0].type === 'call') {
+      let result: UnitMatcher | null = null;
+      matchUnits(
+        units[0].params,
+        capRule,
+        (cap) => { result = cap as UnitMatcher; },
+        0,
+        context,
+      );
+      if (!result) {
+        throw new Error('no result');
+      }
+      return {
+        type: 'call',
+        funcNameMatch: units[0].funcName,
+        params: result
+      };
+    }
+    throw new Error('invalid params');
+  }],
+  ['ONE_OR_MORE_ANY_ORDER', (units, context) => {
+    const split = splitComma(units).map((units): UnitMatcher => {
+      let result: UnitMatcher | null = null;
+      matchUnits(
+        units,
+        capRule,
+        (cap) => { result = cap as UnitMatcher; },
+        0,
+        context,
+      );
+      if (!result) {
+        throw new Error('no result');
+      }
+      return result;
+    });
+    if (split.length === 1) {
+      return split[0];
+    }
+    return {
+      type: 'subset',
+      set: split,
+      min: 1,
+    };
+  }],
+  ['ZERO_OR_MORE_ANY_ORDER', (units, context) => {
+    const split = splitComma(units).map((units): UnitMatcher => {
+      let result: UnitMatcher | null = null;
+      matchUnits(
+        units,
+        capRule,
+        (cap) => { result = cap as UnitMatcher; },
+        0,
+        context,
+      );
+      if (!result) {
+        throw new Error('no result');
+      }
+      return result;
+    });
+    if (split.length === 1) {
+      return split[0];
+    }
+    return {
+      type: 'subset',
+      set: split,
+      min: 0,
+    };
+  }],
+]);
