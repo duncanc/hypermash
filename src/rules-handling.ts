@@ -1011,8 +1011,8 @@ const atomic = {
             type: 'capture-transform',
             transform(name) {
               return {
-                type: 'identifier',
-                match: name as string,
+                type: 'placeholder',
+                placeholder: name as string,
               } satisfies UnitMatcher;
             },
             inner: {

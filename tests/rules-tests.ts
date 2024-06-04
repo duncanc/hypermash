@@ -1445,8 +1445,8 @@ test('rule grammar', async (ctx) => {
         Object.assign(Object.create(null), {
           name: 'blob',
           matcher: {
-            type: 'identifier',
-            match: 'bleeb',
+            type: 'placeholder',
+            placeholder: 'bleeb',
           },
         }),
       ] satisfies {name:string, matcher:UnitMatcher}[],
@@ -1474,12 +1474,12 @@ test('rule grammar', async (ctx) => {
             type: 'sequence',
             sequence: [
               {
-                type: 'identifier',
-                match: 'bleeb',
+                type: 'placeholder',
+                placeholder: 'bleeb',
               },
               {
-                type: 'identifier',
-                match: 'bub',
+                type: 'placeholder',
+                placeholder: 'bub',
               },
             ],
           },
@@ -1509,12 +1509,12 @@ test('rule grammar', async (ctx) => {
             type: 'alternate',
             options: [
               {
-                type: 'identifier',
-                match: 'bleeb',
+                type: 'placeholder',
+                placeholder: 'bleeb',
               },
               {
-                type: 'identifier',
-                match: 'bub',
+                type: 'placeholder',
+                placeholder: 'bub',
               },
             ],
           } satisfies UnitMatcher,
@@ -1543,8 +1543,8 @@ test('rule grammar', async (ctx) => {
           matcher: {
             type: 'repeat',
             inner: {
-              type: 'identifier',
-              match: 'bleeb',
+              type: 'placeholder',
+              placeholder: 'bleeb',
             },
             min: 0,
             max: 1,
@@ -1574,8 +1574,8 @@ test('rule grammar', async (ctx) => {
           matcher: {
             type: 'repeat',
             inner: {
-              type: 'identifier',
-              match: 'bleeb',
+              type: 'placeholder',
+              placeholder: 'bleeb',
             },
             min: 0,
             max: Infinity,
@@ -1605,8 +1605,8 @@ test('rule grammar', async (ctx) => {
           matcher: {
             type: 'repeat',
             inner: {
-              type: 'identifier',
-              match: 'bleeb',
+              type: 'placeholder',
+              placeholder: 'bleeb',
             },
             min: 1,
             max: Infinity,
@@ -1636,8 +1636,8 @@ test('rule grammar', async (ctx) => {
           matcher: {
             type: 'repeat',
             inner: {
-              type: 'identifier',
-              match: 'bleeb',
+              type: 'placeholder',
+              placeholder: 'bleeb',
             },
             min: 3,
             max: 3,
@@ -1667,8 +1667,8 @@ test('rule grammar', async (ctx) => {
           matcher: {
             type: 'repeat',
             inner: {
-              type: 'identifier',
-              match: 'bleeb',
+              type: 'placeholder',
+              placeholder: 'bleeb',
             },
             min: 3,
             max: 5,
@@ -1698,8 +1698,8 @@ test('rule grammar', async (ctx) => {
           matcher: {
             type: 'repeat',
             inner: {
-              type: 'identifier',
-              match: 'bleeb',
+              type: 'placeholder',
+              placeholder: 'bleeb',
             },
             min: 3,
             max: Infinity,
