@@ -485,6 +485,7 @@ export namespace UnitMatcher {
   export type Placeholder = { type: 'placeholder', placeholder: string };
 
   export type CaptureConstant = {type: 'capture-constant', name?: string, constant:unknown};
+  export type CaptureContext = {type: 'capture-context', name?: string};
   export type CaptureArray = {type: 'capture-array', name?: string, inner:UnitMatcher};
   export type CaptureObject = {type: 'capture-object', name?: string, inner:UnitMatcher};
   export type CaptureTransform = {
@@ -533,6 +534,7 @@ export type UnitMatcher = (
   | UnitMatcher.Placeholder
 
   | UnitMatcher.CaptureConstant
+  | UnitMatcher.CaptureContext
   | UnitMatcher.CaptureArray
   | UnitMatcher.CaptureObject
   | UnitMatcher.CaptureTransform
@@ -545,7 +547,8 @@ export function matchUnits(
   units: Unit[],
   matcher: UnitMatcher,
   oncapture = (capture: unknown, name?: string) => {},
-  start_i = 0
+  start_i = 0,
+  context?: unknown,
 ): number {
   if (matcher.type === 'nonzero-whitespace') {
     if (!units[start_i] || (
@@ -582,7 +585,7 @@ export function matchUnits(
   switch (matcher.type) {
     case 'alternate': {
       for (const h of matcher.options) {
-        const end_i = matchUnits(units, h, oncapture, start_i);
+        const end_i = matchUnits(units, h, oncapture, start_i, context);
         if (end_i !== -1) return end_i;
       }
       return -1;
@@ -631,7 +634,7 @@ export function matchUnits(
           return -1;
         }
       }
-      if (matchUnits(unit.params, matcher.params, oncapture, 0) !== unit.params.length) {
+      if (matchUnits(unit.params, matcher.params, oncapture, 0, context) !== unit.params.length) {
         return -1;
       }
       return start_i + 1;
@@ -641,7 +644,7 @@ export function matchUnits(
       if (!unit || unit.type !== matcher.type) {
         return -1;
       }
-      if (matchUnits(unit.content, matcher.contents, oncapture) !== unit.content.length) {
+      if (matchUnits(unit.content, matcher.contents, oncapture, 0, context) !== unit.content.length) {
         return -1;
       }
       return start_i + 1;
@@ -656,14 +659,14 @@ export function matchUnits(
       let count = 0;
       let i = start_i;
       while (count < matcher.min) {
-        const new_i = matchUnits(units, matcher.inner, oncapture, i);
+        const new_i = matchUnits(units, matcher.inner, oncapture, i, context);
         if (new_i === -1) return -1;
         if (new_i === i) return i;
         i = new_i;
         count++;
       }
       while (count < matcher.max) {
-        const new_i = matchUnits(units, matcher.inner, oncapture, i);
+        const new_i = matchUnits(units, matcher.inner, oncapture, i, context);
         if (new_i === -1) return i;
         if (new_i === i) return i;
         i = new_i;
@@ -675,7 +678,7 @@ export function matchUnits(
       let i = start_i;
       const caps: {name?: string, capture: unknown}[] = [];
       for (const h of matcher.sequence) {
-        i = matchUnits(units, h, (capture, name) => caps.push({capture, name}), i);
+        i = matchUnits(units, h, (capture, name) => caps.push({capture, name}), i, context);
         if (i === -1) return -1;
       }
       for (const { capture, name } of caps) {
@@ -692,7 +695,7 @@ export function matchUnits(
       for (item_i = 0; item_i < matcher.min; item_i++) {
         let new_i: number = -1;
         for (let m_i = 0; m_i < set.length; m_i++) {
-          new_i = matchUnits(units, set[m_i], oncapture2, i);
+          new_i = matchUnits(units, set[m_i], oncapture2, i, context);
           if (new_i !== -1) {
             set.splice(m_i, 1);
             break;
@@ -708,7 +711,7 @@ export function matchUnits(
       while (item_i < max) {
         let new_i: number = -1;
         for (let m_i = 0; m_i < set.length; m_i++) {
-          new_i = matchUnits(units, set[m_i], oncapture2, i);
+          new_i = matchUnits(units, set[m_i], oncapture2, i, context);
           if (new_i !== -1) {
             set.splice(m_i, 1);
             break;
@@ -727,10 +730,14 @@ export function matchUnits(
       }
       return start_i + 1;
     }
+    case 'capture-context': {
+      oncapture(context, matcher.name);
+      return start_i;
+    }
     case 'capture-array': {
       const arr: unknown[] = [];
       const oncapture2 = (v: unknown) => { arr.push(v); };
-      const end_i = matchUnits(units, matcher.inner, oncapture2, start_i);
+      const end_i = matchUnits(units, matcher.inner, oncapture2, start_i, context);
       if (end_i === -1) {
         return -1;
       }
@@ -744,7 +751,7 @@ export function matchUnits(
           obj[name] = v;
         }
       };
-      const end_i = matchUnits(units, matcher.inner, oncapture2, start_i);
+      const end_i = matchUnits(units, matcher.inner, oncapture2, start_i, context);
       if (end_i === -1) {
         return -1;
       }
@@ -758,7 +765,7 @@ export function matchUnits(
     case 'capture-transform': {
       const caps: unknown[] = [];
       const oncapture2 = (cap: unknown) => { caps.push(cap); };
-      const end_i = matchUnits(units, matcher.inner, oncapture2, start_i);
+      const end_i = matchUnits(units, matcher.inner, oncapture2, start_i, context);
       if (end_i === -1) {
         return -1;
       }
@@ -768,7 +775,7 @@ export function matchUnits(
     case 'capture-reduce': {
       let cap = matcher.initialValue;
       const oncapture2 = (c: unknown) => { cap = matcher.reduce(cap, c); };
-      const end_i = matchUnits(units, matcher.inner, oncapture2, start_i);
+      const end_i = matchUnits(units, matcher.inner, oncapture2, start_i, context);
       if (end_i === -1) {
         return -1;
       }
@@ -784,7 +791,7 @@ export function matchUnits(
         oncapture(units[start_i]);
         return start_i + 1;
       }
-      const end_i = matchUnits(units, matcher.inner, ()=>{}, start_i);
+      const end_i = matchUnits(units, matcher.inner, ()=>{}, start_i, context);
       if (end_i === -1) return -1;
       if (end_i === start_i) {
         oncapture(null);
@@ -832,7 +839,7 @@ export function matchUnits(
     }
     case 'capture-content': {
       const cMatcher = matcher.inner || {type:'any'};
-      const end_i = matchUnits(units, cMatcher, () => {}, start_i);
+      const end_i = matchUnits(units, cMatcher, () => {}, start_i, context);
       if (end_i === -1) return -1;
       if (end_i === start_i) {
         oncapture('', matcher.name);

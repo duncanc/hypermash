@@ -1423,6 +1423,24 @@ test('rules matching', async (ctx) => {
     assert.deepEqual(capture, 6);
   });
 
+  await ctx.test('capture context', async ctx => {
+    let capture: unknown = undefined;
+    let context = {};
+    assert.equal(
+      matchUnits(
+        toUnits('1 2 3'),
+        {
+          type: 'capture-context',
+        },
+        cap => { capture = cap; },
+        0,
+        context,
+      ),
+      0,
+    );
+    assert.equal(capture, context);
+  });
+
 });
 
 test('rule grammar', async (ctx) => {
