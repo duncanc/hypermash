@@ -1,7 +1,7 @@
 
 import { test, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { eachToken, Token, matchUnits, toUnits, Unit, UnitMatcher, ruleSetUnit } from '../src/rules-handling';
+import { eachToken, Token, matchUnits, toUnits, Unit, UnitMatcher, ruleSetUnit, parseRules } from '../src/rules-handling';
 
 test('rules tokenization', async (ctx) => {
 
@@ -1726,5 +1726,20 @@ test('rule grammar', async (ctx) => {
       ] satisfies {name:string, matcher:UnitMatcher}[],
     );
   });
+
+});
+
+test('rule parsing', async (ctx) => {
+
+  const rules = parseRules(`
+    something: string;
+  `, {
+    functions: new Map(),
+    macros: new Map(),
+  });
+
+  assert.deepEqual(rules, new Map([
+    ['something', {type: 'string'}],
+  ]))
 
 });

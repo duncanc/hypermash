@@ -1248,7 +1248,7 @@ export const ruleSetUnit: UnitMatcher = {
   },
 };
 
-const defaultUnits = new Map<string, UnitMatcher>([
+const defaultMacros = new Map<string, UnitMatcher>([
   ['number', {
     type: 'number',
   }],
@@ -1373,3 +1373,26 @@ const defaultFunctions = new Map<string, (params: Unit[], context: unknown) => U
     };
   }],
 ]);
+
+type RuleParseContext = {
+  functions: Map<string, (units: Unit[], context: RuleParseContext) => UnitMatcher>,
+  macros: Map<string, UnitMatcher>,
+};
+
+export function parseRules(src: string, context: RuleParseContext) {
+  const units = [...toUnits(src)];
+  let cap: Array<{name:string, matcher:UnitMatcher}>;
+  const newContext: RuleParseContext = {
+    functions: new Map([...defaultFunctions, ...context.functions]),
+    macros: new Map([...defaultMacros, ...context.macros]),
+  };
+  matchUnits(
+    units,
+    ruleSetUnit,
+    c => { cap = c as any; },
+    0,
+    newContext,
+  );
+  const result = new Map(cap!.map(({ name, matcher }) => [name, matcher]));
+  return replacePlaceholders(result, new Map([...newContext.macros, ...result]));
+}
