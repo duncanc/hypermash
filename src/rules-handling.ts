@@ -1259,6 +1259,12 @@ const defaultMacros = new Map<string, UnitMatcher>([
   ['string', {
     type: 'string',
   }],
+  ['NONZERO_WHITESPACE', {
+    type: 'nonzero-whitespace',
+  }],
+  ['ZERO_WHITESPACE', {
+    type: 'zero-whitespace',
+  }],
 ]);
 
 const splitComma = (units: Unit[]) => {
