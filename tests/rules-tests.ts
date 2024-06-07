@@ -1731,15 +1731,97 @@ test('rule grammar', async (ctx) => {
 
 test('rule parsing', async (ctx) => {
 
-  const rules = parseRules(`
-    something: string;
-  `, {
-    functions: new Map(),
-    macros: new Map(),
+  await ctx.test('simple rule', ctx => {
+    const rules = parseRules(`
+      something: string;
+    `, {
+      functions: new Map(),
+      macros: new Map(),
+    });
+
+    assert.deepEqual(rules, new Map([
+      ['something', {type: 'string'}],
+    ]))
   });
 
-  assert.deepEqual(rules, new Map([
-    ['something', {type: 'string'}],
-  ]))
+  await ctx.test('no rules', ctx => {
+    const rules = parseRules(`
+    `, {
+      functions: new Map(),
+      macros: new Map(),
+    });
+
+    assert.deepEqual(rules, new Map([
+    ]))
+  });
+
+  await ctx.test('no trailing semicolon', ctx => {
+    const rules = parseRules(`
+      something: string
+    `, {
+      functions: new Map(),
+      macros: new Map(),
+    });
+
+    assert.deepEqual(rules, new Map([
+      ['something', {type: 'string'}],
+    ]));
+  });
+
+  await ctx.test('capture array', ctx => {
+    const rules = parseRules(`
+      something: CAP_ARRAY( );
+    `, {
+      functions: new Map(),
+      macros: new Map(),
+    });
+
+    assert.deepEqual(rules, new Map([
+      ['something', {type: 'capture-array', inner:{type:'sequence', sequence:[]}}],
+    ] satisfies [string, UnitMatcher][]))
+  });
+
+  await ctx.test('symbol', ctx => {
+    const rules = parseRules(`
+      something: ',';
+    `, {
+      functions: new Map(),
+      macros: new Map(),
+    });
+
+    assert.deepEqual(rules, new Map([
+      ['something', {type: 'symbol', symbol:','}],
+    ] satisfies [string, UnitMatcher][]))
+  });
+
+  await ctx.test('symbol', ctx => {
+    const rules = parseRules(`
+      something: '!=';
+    `, {
+      functions: new Map(),
+      macros: new Map(),
+    });
+
+    assert.deepEqual(rules, new Map([
+      ['something', {
+        type: 'sequence',
+        sequence: [
+          {type:'symbol', symbol:'!'},
+          {type:'zero-whitespace'},
+          {type:'symbol', symbol:'='},
+        ],
+      }],
+    ] satisfies [string, UnitMatcher][]))
+  });
 
 });
+
+/*
+test('selector', async ctx => {
+
+  const { selectors, selector } = await import('../src/rules/selectors') as any;
+
+  console.log(selectors, selector);
+
+});
+*/
