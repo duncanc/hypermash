@@ -634,7 +634,16 @@ export function matchUnits(
           return -1;
         }
       }
-      if (matchUnits(unit.params, matcher.params, oncapture, 0, context) !== unit.params.length) {
+      let end_i = matchUnits(unit.params, matcher.params, oncapture, 0, context);
+      if (end_i !== -1) {
+        while (end_i < unit.params.length && (
+          unit.params[end_i].type === 'whitespace'
+          || unit.params[end_i].type === 'comment'
+        )) {
+          end_i++;
+        }
+      }
+      if (end_i !== unit.params.length) {
         return -1;
       }
       return start_i + 1;
