@@ -1378,6 +1378,40 @@ const defaultFunctions = new Map<string, (params: Unit[], context: unknown) => U
       min: 0,
     };
   }],
+  ['CAP_ARRAY', (units, context) => {
+    let result: UnitMatcher | null = null;
+    matchUnits(
+      units,
+      capRule,
+      (cap) => { result = cap as UnitMatcher; },
+      0,
+      context,
+    );
+    if (!result) {
+      throw new Error('no result');
+    }
+    return {
+      type: 'capture-array',
+      inner: result,
+    };
+  }],
+  ['CAP_OBJECT', (units, context) => {
+    let result: UnitMatcher | null = null;
+    matchUnits(
+      units,
+      capRule,
+      (cap) => { result = cap as UnitMatcher; },
+      0,
+      context,
+    );
+    if (!result) {
+      throw new Error('no result');
+    }
+    return {
+      type: 'capture-object',
+      inner: result,
+    };
+  }],
 ]);
 
 type RuleParseContext = {
@@ -1387,7 +1421,7 @@ type RuleParseContext = {
 
 export function parseRules(src: string, context: RuleParseContext) {
   const units = [...toUnits(src)];
-  let cap: Array<{name:string, matcher:UnitMatcher}>;
+  let cap: Array<{name:string, matcher:UnitMatcher}> | null = null;
   const newContext: RuleParseContext = {
     functions: new Map([...defaultFunctions, ...context.functions]),
     macros: new Map([...defaultMacros, ...context.macros]),
