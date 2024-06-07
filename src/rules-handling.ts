@@ -1065,6 +1065,35 @@ const atomic = {
               return result;
             },
           },
+          {
+            type: 'capture-transform',
+            inner: {
+              type: 'capture-content',
+              inner: {
+                type: 'string',
+              },
+            },
+            transform(_str) {
+              const str = _str as string;
+              if (str.length === 1) {
+                return {
+                  type: 'symbol',
+                  symbol: str[0],
+                };
+              }
+              else {
+                const sequence: UnitMatcher[] = [];
+                for (let i = 0; i < str.length; i++) {
+                  if (i > 0) sequence.push({type:'zero-whitespace'});
+                  sequence.push({type:'symbol', symbol:str[i]});
+                }
+                return {
+                  type: 'sequence',
+                  sequence,
+                }
+              }
+            },
+          },
           parenthesized,
         ],
       },
