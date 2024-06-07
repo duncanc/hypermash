@@ -1433,6 +1433,9 @@ export function parseRules(src: string, context: RuleParseContext) {
     0,
     newContext,
   );
+  if (cap as any == null) {
+    throw new Error('failed to match');
+  }
   const result = new Map(cap!.map(({ name, matcher }) => [name, matcher]));
   return replacePlaceholders(result, new Map([...newContext.macros, ...result]));
 }
