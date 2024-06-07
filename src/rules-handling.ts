@@ -655,6 +655,12 @@ export function matchUnits(
       }
       return start_i;
     }
+    case 'any': {
+      if (start_i >= units.length) {
+        return -1;
+      }
+      return start_i + 1;
+    }
     case 'repeat': {
       let count = 0;
       let i = start_i;
@@ -1037,8 +1043,13 @@ const atomic = {
                   inner: {
                     type: 'call',
                     funcNameMatch: /.*/,
-                    params: {type:'any'},
-                  }
+                    params: {
+                      type: 'repeat',
+                      inner: {type:'any'},
+                      min: 0,
+                      max: Infinity,
+                    },
+                  },
                 },
                 {type: 'capture-context'},
               ],
