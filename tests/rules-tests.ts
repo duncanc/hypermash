@@ -1781,6 +1781,46 @@ test('rule parsing', async (ctx) => {
     ] satisfies [string, UnitMatcher][]))
   });
 
+  await ctx.test('capture constant (string)', ctx => {
+    const rules = parseRules(`
+      something: CAP_CONST( 'str' );
+    `, {
+      functions: new Map(),
+      macros: new Map(),
+    });
+
+    assert.deepEqual(rules, new Map([
+      ['something', {type: 'capture-constant', constant:'str'}],
+    ] satisfies [string, UnitMatcher][]))
+  });
+
+  await ctx.test('capture constant (number)', ctx => {
+    const rules = parseRules(`
+      something: CAP_CONST( 3.5 );
+    `, {
+      functions: new Map(),
+      macros: new Map(),
+    });
+
+    assert.deepEqual(rules, new Map([
+      ['something', {type: 'capture-constant', constant:3.5}],
+    ] satisfies [string, UnitMatcher][]))
+  });
+
+  await ctx.test('capture constant (boolean)', ctx => {
+    const rules = parseRules(`
+      something: CAP_CONST( true );
+    `, {
+      functions: new Map(),
+      macros: new Map(),
+    });
+
+    assert.deepEqual(rules, new Map([
+      ['something', {type: 'capture-constant', constant:true}],
+    ] satisfies [string, UnitMatcher][]))
+  });
+
+
   await ctx.test('symbol', ctx => {
     const rules = parseRules(`
       something: ',';
@@ -1815,13 +1855,3 @@ test('rule parsing', async (ctx) => {
   });
 
 });
-
-/*
-test('selector', async ctx => {
-
-  const { selectors, selector } = await import('../src/rules/selectors') as any;
-
-  console.log(selectors, selector);
-
-});
-*/

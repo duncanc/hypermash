@@ -1568,6 +1568,50 @@ const defaultFunctions = new Map<string, (params: Unit[], context: unknown) => U
       inner: result,
     };
   }],
+  ['CAP_CONST', (units, context) => {
+    let unit_i = 0;
+    while (units[unit_i] && (units[unit_i].type === 'whitespace' || units[unit_i].type === 'comment')) {
+      unit_i++;
+    }
+    if (unit_i >= units.length) {
+      throw new Error('CAP_CONST: invalid params');
+    }
+    for (let after_i = unit_i + 1; after_i < units.length; after_i++) {
+      if (units[after_i].type !== 'whitespace' && units[after_i].type !== 'comment') {
+        throw new Error('CAP_CONST: invalid params');
+      }
+    }
+    const unit = units[unit_i];
+    switch (unit.type) {
+      case 'string': {
+        return {
+          type: 'capture-constant',
+          constant: unit.content,
+        };
+      }
+      case 'number': {
+        if (unit.unit) {
+          throw new Error('CAP_CONST: invalid params');
+        }
+        return {
+          type: 'capture-constant',
+          constant: unit.value,
+        }
+      }
+      case 'identifier': {
+        switch (unit.content) {
+          case 'null': return {type:'capture-constant', constant:null};
+          case 'true': return {type:'capture-constant', constant:true};
+          case 'false': return {type:'capture-constant', constant:false};
+          case 'undefined': return {type:'capture-constant', constant:undefined};
+          case 'NaN': return {type:'capture-constant', constant:NaN};
+          case 'infinity': return {type:'capture-constant', constant:Infinity};
+        }
+        break;
+      }
+    }
+    throw new Error('CAP_CONST: invalid params');
+  }],
 ]);
 
 type RuleParseContext = {
