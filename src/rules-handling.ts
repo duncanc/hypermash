@@ -635,15 +635,7 @@ export function matchUnits(
         }
       }
       let end_i = matchUnits(unit.params, matcher.params, oncapture, 0, context);
-      if (end_i !== -1) {
-        while (end_i < unit.params.length && (
-          unit.params[end_i].type === 'whitespace'
-          || unit.params[end_i].type === 'comment'
-        )) {
-          end_i++;
-        }
-      }
-      if (end_i !== unit.params.length) {
+      if (end_i === -1) {
         return -1;
       }
       return start_i + 1;
@@ -653,7 +645,7 @@ export function matchUnits(
       if (!unit || unit.type !== matcher.type) {
         return -1;
       }
-      if (matchUnits(unit.content, matcher.contents, oncapture, 0, context) !== unit.content.length) {
+      if (matchUnits(unit.content, matcher.contents, oncapture, 0, context) === -1) {
         return -1;
       }
       return start_i + 1;
@@ -673,17 +665,24 @@ export function matchUnits(
     case 'repeat': {
       let count = 0;
       let i = start_i;
+      const caps: {cap:unknown, name?:string}[] = [];
+      const oncapture2 = (cap: unknown, name?: string) => { caps.push({cap, name}); };
       while (count < matcher.min) {
-        const new_i = matchUnits(units, matcher.inner, oncapture, i, context);
+        const new_i = matchUnits(units, matcher.inner, oncapture2, i, context);
         if (new_i === -1) return -1;
-        if (new_i === i) return i;
+        if (new_i === i) {
+          throw new Error('nothing to repeat');
+        }
         i = new_i;
         count++;
       }
+      for (const { cap, name } of caps) oncapture(cap, name);
       while (count < matcher.max) {
         const new_i = matchUnits(units, matcher.inner, oncapture, i, context);
         if (new_i === -1) return i;
-        if (new_i === i) return i;
+        if (new_i === i) {
+          throw new Error('nothing to repeat');
+        }
         i = new_i;
         count++;
       }
@@ -746,6 +745,9 @@ export function matchUnits(
       return start_i + 1;
     }
     case 'capture-context': {
+      if (context == null) {
+        throw new Error('context value is null or undefined');
+      }
       oncapture(context, matcher.name);
       return start_i;
     }
@@ -1065,12 +1067,12 @@ const atomic = {
             },
             transform(_callUnit, _context) {
               const callUnit = _callUnit as Unit.Call;
-              const context = _context as {functions:Map<string, (units: Unit[]) => UnitMatcher>};
+              const context = _context as {functions:Map<string, (units: Unit[], context: unknown) => UnitMatcher>};
               const func = context.functions.get(callUnit.funcName);
               if (!func) {
                 throw new Error('function not defined: ' + callUnit.funcName);
               }
-              const result = func(callUnit.params);
+              const result = func(callUnit.params, context);
               return result;
             },
           },
@@ -1308,6 +1310,12 @@ const defaultMacros = new Map<string, UnitMatcher>([
   ['string', {
     type: 'string',
   }],
+  ['identifier', {
+    type: 'identifier'
+  }],
+  ['hash', {
+    type: 'hash',
+  }],
   ['NONZERO_WHITESPACE', {
     type: 'nonzero-whitespace',
   }],
@@ -1332,19 +1340,67 @@ const splitComma = (units: Unit[]) => {
 };
 
 const defaultFunctions = new Map<string, (params: Unit[], context: unknown) => UnitMatcher>([
-  ['ID', (units) => {
-    if (units.length === 0) {
+  ['ID', (units, context) => {
+    let ids: string[];
+    matchUnits(
+      units,
+      {
+        type: 'capture-array',
+        inner: {
+          type: 'sequence',
+          sequence: [
+            {
+              type: 'repeat',
+              min: 0,
+              max: 1,
+              inner: {
+                type: 'sequence',
+                sequence: [
+                  {
+                    type: 'capture-content',
+                    inner: {type:'identifier'},
+                  },
+                  {
+                    type: 'repeat',
+                    inner: {
+                      type: 'sequence',
+                      sequence: [
+                        {type: 'symbol', symbol:'|'},
+                        {type: 'capture-content', inner:{type:'identifier'}}
+                      ],
+                    },
+                    min: 0,
+                    max: Infinity,
+                  }
+                ],
+              },
+            },
+            {type:'end'}
+          ],
+        },
+      },
+      cap => { ids = cap as string[]; },
+      0,
+      context,
+    )
+    if (!ids!) {
+      throw new Error('invalid content in ID()');
+    }
+    if (ids.length === 0) {
       return {
         type: 'identifier',
       };
     }
-    if (units.length === 1 && units[0].type === 'identifier') {
+    if (ids.length === 1) {
       return {
         type: 'identifier',
-        match: units[0].content,
+        match: ids[1],
       };
     }
-    throw new Error('invalid params');
+    return {
+      type: 'alternate',
+      options: ids.map(id => ({type:'identifier', match:id}))
+    }
   }],
   ['HASH', (units) => {
     if (units.length === 1 && units[0].type === 'call' && units[0].funcName === 'MATCH') {
@@ -1425,6 +1481,57 @@ const defaultFunctions = new Map<string, (params: Unit[], context: unknown) => U
       type: 'subset',
       set: split,
       min: 0,
+    };
+  }],
+  ['ROUND', (units, context) => {
+    let result: UnitMatcher | null = null;
+    matchUnits(
+      units,
+      capRule,
+      (cap) => { result = cap as UnitMatcher; },
+      0,
+      context,
+    );
+    if (!result) {
+      throw new Error('no result');
+    }
+    return {
+      type: 'round',
+      contents: result,
+    };
+  }],
+  ['SQUARE', (units, context) => {
+    let result: UnitMatcher | null = null;
+    matchUnits(
+      units,
+      capRule,
+      (cap) => { result = cap as UnitMatcher; },
+      0,
+      context,
+    );
+    if (!result) {
+      throw new Error('no result');
+    }
+    return {
+      type: 'square',
+      contents: result,
+    };
+  }],
+  ['CURLY', (units, context) => {
+    let result: UnitMatcher | null = null;
+    matchUnits(
+      units,
+      capRule,
+      (cap) => { result = cap as UnitMatcher; },
+      0,
+      context,
+    );
+    if (!result) {
+      throw new Error('no result');
+    }
+    return {
+      type: 'curly',
+      contents: result,
     };
   }],
   ['CAP_ARRAY', (units, context) => {
