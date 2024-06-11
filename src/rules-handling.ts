@@ -875,9 +875,9 @@ export function matchUnits(
   }
 }
 
-function replacePlaceholders(matcher: UnitMatcher, placeholders: Map<string, UnitMatcher>): UnitMatcher;
-function replacePlaceholders(matchers: Map<string, UnitMatcher>, placeholders: Map<string, UnitMatcher>): Map<string, UnitMatcher>;
-function replacePlaceholders(matcher: UnitMatcher | Map<string, UnitMatcher>, placeholders: Map<string, UnitMatcher>): UnitMatcher | Map<string, UnitMatcher> {
+export function replacePlaceholders(matcher: UnitMatcher, placeholders: Map<string, UnitMatcher>): UnitMatcher;
+export function replacePlaceholders(matchers: Map<string, UnitMatcher>, placeholders: Map<string, UnitMatcher>): Map<string, UnitMatcher>;
+export function replacePlaceholders(matcher: UnitMatcher | Map<string, UnitMatcher>, placeholders: Map<string, UnitMatcher>): UnitMatcher | Map<string, UnitMatcher> {
   if (matcher instanceof Map) {
     const result = new Map<string, UnitMatcher>();
     for (const name of matcher.keys()) {
