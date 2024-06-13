@@ -884,7 +884,7 @@ export function replacePlaceholders(matcher: UnitMatcher | Map<string, UnitMatch
       result.set(name, {} as UnitMatcher);
     }
     const combined = new Map<string, UnitMatcher>(placeholders);
-    for (const [name, value] of matcher) {
+    for (const [name, value] of result) {
       combined.set(name, value);
     }
     for (const [name, value] of result) {
@@ -894,9 +894,16 @@ export function replacePlaceholders(matcher: UnitMatcher | Map<string, UnitMatch
   }
   switch (matcher.type) {
     case 'placeholder': {
-      const replace = placeholders.get(matcher.placeholder);
+      let replace = placeholders.get(matcher.placeholder);
       if (!replace) {
         throw new Error('placeholder not found: ' + matcher.placeholder);
+      }
+      while (replace.type === 'placeholder') {
+        const placeholder = replace.placeholder;
+        replace = placeholders.get(placeholder);
+        if (!replace) {
+          throw new Error('placeholder not found: ' + placeholder);
+        }
       }
       return replace;
     }
@@ -1637,5 +1644,5 @@ export function parseRules(src: string, context: RuleParseContext) {
     throw new Error('failed to match');
   }
   const result = new Map(cap!.map(({ name, matcher }) => [name, matcher]));
-  return replacePlaceholders(result, new Map([...newContext.macros, ...result]));
+  return replacePlaceholders(result, newContext.macros);
 }
