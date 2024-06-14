@@ -1692,6 +1692,9 @@ export function pairToSequence(a: UnitMatcher, b: UnitMatcher): UnitMatcher {
             sequence: [...a.sequence, ...b.sequence],
           };
         }
+        case 'success': {
+          return a;
+        }
       }
       return {
         type: 'sequence',
@@ -1734,6 +1737,9 @@ export function pairToAlternate(a: UnitMatcher, b: UnitMatcher): UnitMatcher {
             type: 'alternate',
             options: [...a.options, ...b.options],
           };
+        }
+        case 'failure': {
+          return a;
         }
       }
       return {
