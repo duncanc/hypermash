@@ -1681,3 +1681,86 @@ export function parseRules(src: string, context: RuleParseContext) {
   const result = new Map(cap!.map(({ name, matcher }) => [name, matcher]));
   return replacePlaceholders(result, newContext.macros);
 }
+
+export function pairToSequence(a: UnitMatcher, b: UnitMatcher): UnitMatcher {
+  switch (a.type) {
+    case 'sequence': {
+      switch (b.type) {
+        case 'sequence': {
+          return {
+            type: 'sequence',
+            sequence: [...a.sequence, ...b.sequence],
+          };
+        }
+      }
+      return {
+        type: 'sequence',
+        sequence: [...a.sequence, b],
+      };
+    }
+    case 'success': {
+      return b;
+    }
+    case 'failure': {
+      return a;
+    }
+  }
+  switch (b.type) {
+    case 'success': {
+      return a;
+    }
+    case 'failure': {
+      return b;
+    }
+    case 'sequence': {
+      return {
+        type: 'sequence',
+        sequence: [a, ...b.sequence],
+      };
+    }
+  }
+  return {
+    type: 'sequence',
+    sequence: [a, b],
+  };
+}
+
+export function pairToAlternate(a: UnitMatcher, b: UnitMatcher): UnitMatcher {
+  switch (a.type) {
+    case 'alternate': {
+      switch (b.type) {
+        case 'alternate': {
+          return {
+            type: 'alternate',
+            options: [...a.options, ...b.options],
+          };
+        }
+      }
+      return {
+        type: 'alternate',
+        options: [...a.options, b],
+      }
+    }
+    case 'success': {
+      return a;
+    }
+    case 'failure': {
+      return b;
+    }
+  }
+  switch (b.type) {
+    case 'alternate': {
+      return {
+        type: 'alternate',
+        options: [a, ...b.options],
+      }
+    }
+    case 'failure': {
+      return a;
+    }
+  }
+  return {
+    type: 'alternate',
+    options: [a, b],
+  };
+}
