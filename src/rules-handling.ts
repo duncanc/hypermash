@@ -488,6 +488,7 @@ export namespace UnitMatcher {
   export type CaptureContext = {type: 'capture-context', name?: string};
   export type CaptureArray = {type: 'capture-array', name?: string, inner:UnitMatcher};
   export type CaptureObject = {type: 'capture-object', name?: string, inner:UnitMatcher};
+  export type CaptureNamed = {type:'capture-named', name: string, inner:UnitMatcher};
   export type CaptureTransform = {
     type: 'capture-transform';
     inner: UnitMatcher;
@@ -537,6 +538,7 @@ export type UnitMatcher = (
   | UnitMatcher.CaptureContext
   | UnitMatcher.CaptureArray
   | UnitMatcher.CaptureObject
+  | UnitMatcher.CaptureNamed
   | UnitMatcher.CaptureTransform
   | UnitMatcher.CaptureReduce
   | UnitMatcher.CaptureUnit
@@ -775,6 +777,11 @@ export function matchUnits(
       oncapture(obj, matcher.name);
       return end_i;
     }
+    case 'capture-named': {
+      const name = matcher.name;
+      const oncapture2 = (cap: unknown) => oncapture(cap, name);
+      return matchUnits(units, matcher.inner, oncapture2, start_i, context);
+    }
     case 'capture-constant': {
       oncapture(matcher.constant, matcher.name);
       return start_i;
@@ -972,7 +979,9 @@ export function replacePlaceholders(matcher: UnitMatcher | Map<string, UnitMatch
       }
       return matcher;
     }
-    case 'capture-array': case 'capture-object': case 'capture-reduce': case 'capture-transform': case 'capture-unit': case 'capture-content': case 'repeat': {
+    case 'capture-array': case 'capture-object': case 'capture-reduce':
+    case 'capture-transform': case 'capture-unit': case 'capture-content':
+    case 'capture-named': case 'repeat': {
       if (matcher.inner) {
         const inner = replacePlaceholders(matcher.inner, placeholders);
         if (inner !== matcher.inner) {
@@ -1572,6 +1581,32 @@ const defaultFunctions = new Map<string, (params: Unit[], context: unknown) => U
     }
     return {
       type: 'capture-object',
+      inner: result,
+    };
+  }],
+  ['CAP_NAMED', (units, context) => {
+    units = units.filter(v => v.type !== 'whitespace' && v.type !== 'comment');
+    if (units.length !== 3
+        || units[0].type !== 'identifier'
+        || units[1].type !== 'symbol'
+        || units[1].content !== ',') {
+      throw new Error('invalid params');
+    }
+    const name = units[0].content;
+    let result: UnitMatcher | null = null;
+    matchUnits(
+      [units[2]],
+      capRule,
+      cap => { result = cap as UnitMatcher; },
+      0,
+      context,
+    );
+    if (!result) {
+      throw new Error('no result');
+    }
+    return {
+      type: 'capture-named',
+      name,
       inner: result,
     };
   }],
