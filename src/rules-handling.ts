@@ -1586,7 +1586,7 @@ const defaultFunctions = new Map<string, (params: Unit[], context: unknown) => U
   }],
   ['CAP_NAMED', (units, context) => {
     units = units.filter(v => v.type !== 'whitespace' && v.type !== 'comment');
-    if (units.length !== 3
+    if (units.length < 3
         || units[0].type !== 'identifier'
         || units[1].type !== 'symbol'
         || units[1].content !== ',') {
@@ -1595,7 +1595,7 @@ const defaultFunctions = new Map<string, (params: Unit[], context: unknown) => U
     const name = units[0].content;
     let result: UnitMatcher | null = null;
     matchUnits(
-      [units[2]],
+      units.slice(2),
       capRule,
       cap => { result = cap as UnitMatcher; },
       0,
@@ -1607,6 +1607,23 @@ const defaultFunctions = new Map<string, (params: Unit[], context: unknown) => U
     return {
       type: 'capture-named',
       name,
+      inner: result,
+    };
+  }],
+  ['CAP', (units, context) => {
+    let result: UnitMatcher | null = null;
+    matchUnits(
+      units,
+      capRule,
+      cap => { result = cap as UnitMatcher; },
+      0,
+      context,
+    );
+    if (!result) {
+      throw new Error('no result');
+    }
+    return {
+      type: 'capture-content',
       inner: result,
     };
   }],
