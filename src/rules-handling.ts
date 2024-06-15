@@ -483,6 +483,8 @@ export namespace UnitMatcher {
   export type Number = { type: 'number'; unit?: string | Set<string | false> | false; };
   export type UnicodeRange = { type: 'unicode-range' };
   export type Placeholder = { type: 'placeholder', placeholder: string };
+  export type NegativeLookahead = { type: 'negative-lookahead', inner:UnitMatcher };
+  export type PositiveLookahead = { type: 'positive-lookahead', inner:UnitMatcher };
 
   export type CaptureConstant = {type: 'capture-constant', name?: string, constant:unknown};
   export type CaptureContext = {type: 'capture-context', name?: string};
@@ -533,6 +535,8 @@ export type UnitMatcher = (
   | UnitMatcher.Number
   | UnitMatcher.UnicodeRange
   | UnitMatcher.Placeholder
+  | UnitMatcher.NegativeLookahead
+  | UnitMatcher.PositiveLookahead
 
   | UnitMatcher.CaptureConstant
   | UnitMatcher.CaptureContext
@@ -745,6 +749,18 @@ export function matchUnits(
         return -1;
       }
       return start_i + 1;
+    }
+    case 'negative-lookahead': {
+      if (matchUnits(units, matcher.inner, ()=>{}, start_i, context) !== -1) {
+        return -1;
+      }
+      return start_i;
+    }
+    case 'positive-lookahead': {
+      if (matchUnits(units, matcher.inner, ()=>{}, start_i, context) === -1) {
+        return -1;
+      }
+      return start_i;
     }
     case 'capture-context': {
       if (context == null) {
