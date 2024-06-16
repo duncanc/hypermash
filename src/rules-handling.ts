@@ -561,6 +561,12 @@ export function matchUnits(
       units[start_i].type !== 'whitespace'
       && units[start_i].type !== 'comment'
     )) {
+      if (start_i > 0 && (
+        units[start_i-1].type === 'whitespace'
+        || units[start_i-1].type === 'comment')
+      ) {
+        return start_i;
+      }
       return -1;
     }
     do {
@@ -575,7 +581,10 @@ export function matchUnits(
     if (units[start_i] && (
       units[start_i].type === 'whitespace'
       || units[start_i].type === 'comment'
-    )) {
+    ) && (start_i === 0 || (
+      units[start_i-1].type === 'whitespace'
+      || units[start_i-1].type === 'comment'
+    ))) {
       return -1;
     }
     return start_i;
@@ -1855,4 +1864,11 @@ export function pairToAlternate(a: UnitMatcher, b: UnitMatcher): UnitMatcher {
     type: 'alternate',
     options: [a, b],
   };
+}
+
+export function captureUnits(units: Unit[] | string, matcher: UnitMatcher, context?: unknown) {
+  let capture: unknown = null;
+  if (typeof units === 'string') units = toUnits(units);
+  matchUnits(units, matcher, c => { capture = c; }, 0, context);
+  return capture;
 }
