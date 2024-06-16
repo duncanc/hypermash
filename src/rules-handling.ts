@@ -1041,7 +1041,7 @@ const parenthesized: UnitMatcher.Container = {
   },
 };
 
-const atomic = {
+let atomic: UnitMatcher = {
   type: 'capture-transform',
   transform(m, min, max) {
     if (max === true) {
@@ -1138,6 +1138,32 @@ const atomic = {
             },
           },
           parenthesized,
+          {
+            type: 'sequence',
+            sequence: [
+              {
+                type: 'symbol',
+                symbol: '!',
+              },
+              {
+                type: 'capture-object',
+                inner: {
+                  type: 'sequence',
+                  sequence: [
+                    {type: 'capture-constant', name:'type', constant:'negative-lookahead'},
+                    {
+                      type: 'capture-named',
+                      name: 'inner',
+                      inner: {
+                        type: 'placeholder',
+                        placeholder: 'atomic',
+                      },
+                    },
+                  ],
+                }
+              },
+            ],
+          },
         ],
       },
       {
@@ -1207,7 +1233,9 @@ const atomic = {
       },
     ],
   },
-} satisfies UnitMatcher;
+};
+
+atomic = replacePlaceholders(new Map([['atomic', atomic]]), new Map()).get('atomic')!;
 
 const altRule: UnitMatcher = {
   type: 'capture-transform',
@@ -1347,6 +1375,9 @@ const defaultMacros = new Map<string, UnitMatcher>([
   }],
   ['hash', {
     type: 'hash',
+  }],
+  ['any', {
+    type: 'any',
   }],
   ['NONZERO_WHITESPACE', {
     type: 'nonzero-whitespace',
