@@ -1379,6 +1379,11 @@ const defaultMacros = new Map<string, UnitMatcher>([
   ['any', {
     type: 'any',
   }],
+  ['call', {
+    type: 'call',
+    funcNameMatch: /^.*$/,
+    params: {type:'success'},
+  }],
   ['NONZERO_WHITESPACE', {
     type: 'nonzero-whitespace',
   }],
@@ -1671,6 +1676,23 @@ const defaultFunctions = new Map<string, (params: Unit[], context: unknown) => U
     }
     return {
       type: 'capture-content',
+      inner: result,
+    };
+  }],
+  ['CAP_UNIT', (units, context) => {
+    let result: UnitMatcher | null = null;
+    matchUnits(
+      units,
+      capRule,
+      cap => { result = cap as UnitMatcher; },
+      0,
+      context,
+    );
+    if (!result) {
+      throw new Error('no result');
+    }
+    return {
+      type: 'capture-unit',
       inner: result,
     };
   }],
