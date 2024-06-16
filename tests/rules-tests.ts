@@ -1854,4 +1854,26 @@ test('rule parsing', async (ctx) => {
     ] satisfies [string, UnitMatcher][]))
   });
 
+  await ctx.test('negated', ctx => {
+    const rules = parseRules(`
+      something: !';' any;
+    `, {
+      functions: new Map(),
+      macros: new Map([]),
+    });
+
+    assert.deepEqual(rules, new Map([
+      ['something', {
+        type: 'sequence',
+        sequence: [
+          Object.assign(Object.create(null), {
+            type:'negative-lookahead',
+            inner: {type:'symbol', symbol:';'},
+          }),
+          {type:'any'},
+        ],
+      }],
+    ] satisfies [string, UnitMatcher][]))
+  });
+
 });
