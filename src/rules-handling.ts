@@ -556,48 +556,31 @@ export function matchUnits(
   start_i = 0,
   context?: unknown,
 ): number {
-  if (matcher.type === 'nonzero-whitespace') {
-    if (!units[start_i] || (
-      units[start_i].type !== 'whitespace'
-      && units[start_i].type !== 'comment'
-    )) {
-      if (start_i > 0 && (
-        units[start_i-1].type === 'whitespace'
-        || units[start_i-1].type === 'comment')
+  while (units[start_i] && (
+    units[start_i].type === 'whitespace'
+    || units[start_i].type === 'comment'
+  )) {
+    start_i++;  
+  }
+  switch (matcher.type) {
+    case 'nonzero-whitespace': {
+      if (start_i === 0 || (
+        units[start_i-1].type !== 'whitespace'
+        && units[start_i-1].type !== 'comment')
+      ) {
+        return -1;
+      }
+      return start_i;
+    }
+    case 'zero-whitespace': {
+      if (start_i === 0 || (
+        units[start_i-1].type !== 'whitespace' &&
+        units[start_i-1].type !== 'comment')
       ) {
         return start_i;
       }
       return -1;
     }
-    do {
-      start_i++;
-    } while (units[start_i] && (
-      units[start_i].type === 'whitespace'
-      || units[start_i].type === 'comment'
-    ));
-    return start_i;
-  }
-  else if (matcher.type === 'zero-whitespace') {
-    if (units[start_i] && (
-      units[start_i].type === 'whitespace'
-      || units[start_i].type === 'comment'
-    ) && (start_i === 0 || (
-      units[start_i-1].type === 'whitespace'
-      || units[start_i-1].type === 'comment'
-    ))) {
-      return -1;
-    }
-    return start_i;
-  }
-  else {
-    while (units[start_i] && (
-      units[start_i].type === 'whitespace'
-      || units[start_i].type === 'comment'
-    )) {
-      start_i++;  
-    }
-  }
-  switch (matcher.type) {
     case 'alternate': {
       for (const h of matcher.options) {
         const end_i = matchUnits(units, h, oncapture, start_i, context);
