@@ -890,6 +890,404 @@ export function matchUnits(
   }
 }
 
+type CaptureInfo = {
+  name?: string;
+  value: unknown;
+};
+
+type MatchInfo = {
+  end_i: number;
+  captures?: Array<CaptureInfo>;
+};
+
+function *eachMatch(
+  units: Unit[],
+  matcher: UnitMatcher,
+  start_i: number,
+  context: unknown,
+): Generator<MatchInfo, void, void> {
+  while (units[start_i] && (
+    units[start_i].type === 'whitespace'
+    || units[start_i].type === 'comment'
+  )) {
+    start_i++;  
+  }
+  switch (matcher.type) {
+    case 'nonzero-whitespace': {
+      if (start_i !== 0 && (
+        units[start_i-1].type === 'whitespace'
+        && units[start_i-1].type === 'comment')
+      ) {
+        yield {end_i: start_i};
+      }
+      return;
+    }
+    case 'zero-whitespace': {
+      if (start_i === 0 || (
+        units[start_i-1].type !== 'whitespace' &&
+        units[start_i-1].type !== 'comment')
+      ) {
+        yield {end_i: start_i};
+      }
+      return;
+    }
+    case 'alternate': {
+      for (const h of matcher.options) {
+        yield* eachMatch(units, h, start_i, context);
+      }
+      return;
+    }
+    case 'any': {
+      if (units[start_i]) yield {end_i: start_i + 1};
+      return;
+    }
+    case 'at-identifier': case 'identifier': case 'hash': {
+      const unit = units[start_i];
+      if (!unit || unit.type !== matcher.type) {
+        return;
+      }
+      if (typeof matcher.match === 'string') {
+        if (matcher.match !== unit.content) {
+          return;
+        }
+      }
+      else if (matcher.match instanceof RegExp) {
+        if (!matcher.match.test(unit.content)) {
+          return;
+        }
+      }
+      yield {end_i: start_i + 1};
+      return;
+    }
+    case 'success': {
+      yield {end_i: start_i};
+      return;
+    }
+    case 'failure': {
+      return;
+    }
+    case 'placeholder': {
+      throw new Error('placeholders must be replaced before matching');
+    }
+    case 'call': {
+      const unit = units[start_i];
+      if (!unit || unit.type !== 'call') {
+        return;
+      }
+      if (typeof matcher.funcNameMatch === 'string') {
+        if (matcher.funcNameMatch !== unit.funcName) {
+          return;
+        }
+      }
+      else {
+        if (!matcher.funcNameMatch.test(unit.funcName)) {
+          return;
+        }
+      }
+      const caps: CaptureInfo[] = [];
+      for (const m of eachMatch(unit.params, matcher.params, 0, context)) {
+        yield {end_i: start_i + 1, captures:m.captures};
+      }
+      return;
+    }
+    case 'curly': case 'round': case 'square': {
+      const unit = units[start_i];
+      if (!unit || unit.type !== matcher.type) {
+        return;
+      }
+      for (const m of eachMatch(unit.content, matcher.contents, 0, context)) {
+        yield {end_i:start_i + 1, captures:m.captures};
+      }
+      return;
+    }
+    case 'end': {
+      if (start_i >= units.length) {
+        yield {end_i:start_i};
+      }
+      return;
+    }
+    case 'any': {
+      if (start_i < units.length) {
+        yield {end_i:start_i + 1};
+      }
+      return;
+    }
+    case 'repeat': {
+      if (matcher.max === 1 && matcher.min === 0) {
+        yield *eachMatch(units, matcher.inner, start_i, context);
+        yield {end_i: start_i};
+        return;
+      }
+      const iterators: Iterator<MatchInfo>[] = [];
+      const matches: MatchInfo[] = [];
+      repeatLoop: for (;;) {
+        while (iterators.length < matcher.max) {
+          const iter = eachMatch(
+            units,
+            matcher.inner,
+            (matches[matches.length-1] || {end_i:start_i}).end_i,
+            context,
+          );
+          const step = iter.next();
+          if (step.done) {
+            break;
+          }
+          iterators.push(iter);
+          matches.push(step.value);
+        }
+        if (matches.length >= matcher.min) {
+          yield {
+            end_i: (matches[matches.length-1] || {end_i:start_i}).end_i,
+            captures: matches.reduce((a: undefined | CaptureInfo[], b: MatchInfo) => {
+              if (!a) return b.captures;
+              if (!b.captures) return a;
+              return [...a, ...b.captures];
+            }, undefined),
+          };
+        }
+        for (;;) {
+          if (iterators.length === 0) return;
+          const step = iterators[iterators.length-1].next();
+          if (step.done) {
+            iterators.pop();
+            continue;
+          }
+          matches[iterators.length-1] = step.value;
+          matches.length = iterators.length;
+          continue repeatLoop;
+        }
+      }
+    }
+    case 'sequence': {
+      const iterators: Iterator<MatchInfo>[] = [];
+      const matches: MatchInfo[] = [];
+      for (let i = 0; i < matcher.sequence.length; i++) {
+        const iter = eachMatch(
+          units,
+          matcher.sequence[i],
+          i === 0 ? start_i : matches[i-1].end_i,
+          context,
+        );
+        const first = iter.next();
+        if (first.done) return;
+        iterators.push(iter);
+        matches.push(first.value);
+      }
+      captureLoop: for (;;) {
+        const captures = matches.reduce(
+          (a: CaptureInfo[] | undefined, b: MatchInfo) => {
+            if (!a) return b.captures;
+            if (!b.captures) return a;
+            return [...a, ...b.captures];
+          }, undefined);
+        yield {
+          end_i: (matches[matches.length-1] || {end_i:start_i}).end_i,
+          captures,
+        };
+        let i = iterators.length - 1;
+        stepBack: for (; i >= 0; i--) {
+          const step = iterators[i].next();
+          if (step.done) continue;
+          matches[i] = step.value;
+          for (let j = i+1; j < iterators.length; j++) {
+            const iter = eachMatch(
+              units,
+              matcher.sequence[j],
+              matches[j-1].end_i,
+              context);
+            const step = iterators[j].next();
+            if (step.done) {
+              continue stepBack;
+            }
+            iterators[j] = iter;
+            matches[j] = step.value;
+          }
+          continue captureLoop;
+        }
+        return;
+      }
+    }
+    case 'subset': {
+      function *eachSubset(set: UnitMatcher[], start_i: number) {
+        if (set.length === 1) {
+          yield *eachMatch(units, set[0], start_i, context);
+        }
+        else for (let i = 0; i < set.length; i++) {
+          const iter = eachMatch(units, set[i], start_i, context);
+          let step = iter.next();
+          if (!step.done) {
+            const subset = set.slice();
+            subset.splice(i, 1);
+            do {
+              for (const m of eachSubset(subset, step.value.end_i)) {
+                const captures = (
+                  step.value.captures ?
+                    m.captures ?
+                      [...step.value.captures, ...m.captures]
+                    : step.value.captures
+                  : m.captures);
+                yield {end_i: m.end_i, captures};
+              }
+              step = iter.next()
+            } while (!step.done);
+          }
+        }
+        yield {end_i: start_i};
+      }
+      yield *eachSubset(matcher.set, start_i);
+      return;
+    }
+    case 'symbol': {
+      const unit = units[start_i];
+      if (unit && unit.type === 'symbol' && unit.content === matcher.symbol) {
+        yield {end_i: start_i + 1};
+      }
+      return;
+    }
+    case 'negative-lookahead': {
+      for (const _ of eachMatch(units, matcher.inner, start_i, context)) {
+        return;
+      }
+      yield {end_i:start_i};
+      return;
+    }
+    case 'positive-lookahead': {
+      for (const _ of eachMatch(units, matcher.inner, start_i, context)) {
+        yield {end_i:start_i};
+        return;
+      }
+      return;
+    }
+    case 'capture-context': {
+      if (context == null) {
+        throw new Error('context value is null or undefined');
+      }
+      yield {end_i:start_i, captures:[{value:context, name:matcher.name}]};
+      return;
+    }
+    case 'capture-array': {
+      for (const m of eachMatch(units, matcher.inner, start_i, context)) {
+        yield {end_i: m.end_i, captures: [
+          {
+            value: (m.captures || []).map(({ value }) => value),
+            name: matcher.name,
+          },
+        ]};
+      }
+      return;
+    }
+    case 'capture-object': {
+      for (const m of eachMatch(units, matcher.inner, start_i, context)) {
+        const obj = {};
+        for (const c of m.captures || []) {
+          if (c.name) obj[c.name] = c.value;
+        }
+        yield {end_i: m.end_i, captures:[{value:obj}]};
+      }
+      return;
+    }
+    case 'capture-named': {
+      for (const m of eachMatch(units, matcher.inner, start_i, context)) {
+        const cap = m.captures && m.captures[0];
+        yield {end_i:m.end_i, captures:cap ? [{name:matcher.name, value:cap.value}] : []};
+      }
+      return;
+    }
+    case 'capture-constant': {
+      yield {end_i:start_i, captures:[{value:matcher.constant, name: matcher.name}]};
+      return;
+    }
+    case 'capture-transform': {
+      for (const m of eachMatch(units, matcher.inner, start_i, context)) {
+        const caps = (m.captures || []).filter(v => !v.name).map(v => v.value);
+        const newCap = matcher.transform(...caps);
+        yield {end_i:m.end_i, captures:[{value:newCap, name:matcher.name}]};
+      }
+      return;
+    }
+    case 'capture-reduce': {
+      for (const m of eachMatch(units, matcher.inner, start_i, context)) {
+        const caps = (m.captures || []).filter(v => !v.name).map(v => v.value);
+        const newCap = caps.reduce((a, b) => matcher.reduce(a, b));
+        yield {end_i:m.end_i, captures:[{value:newCap, name:matcher.name}]};
+      }
+      return;
+    }
+    case 'capture-unit': {
+      for (const m of eachMatch(units, matcher.inner || {type:'any'}, start_i, context)) {
+        if (matcher.name) {
+          if (m.end_i > start_i) {
+            yield {
+              end_i: m.end_i,
+              captures: [{value:units[m.end_i - 1], name:matcher.name}],
+            };
+          }
+        }
+        else {
+          yield {
+            end_i: m.end_i,
+            captures: units.slice(start_i, m.end_i).map(v => ({value:v})),
+          };
+        }
+      }
+      return;
+    }
+    case 'string': {
+      if (units[start_i] && units[start_i].type === 'string') {
+        yield {end_i: start_i + 1};
+      }
+      return;
+    }
+    case 'unicode-range': {
+      if (units[start_i] && units[start_i].type === 'unicode-range') {
+        yield {end_i: start_i + 1};
+      }
+      return;
+    }
+    case 'number': {
+      const unit = units[start_i];
+      if (!unit || unit.type !== 'number') {
+        return;
+      }
+      if (matcher.unit) {
+        if (typeof matcher.unit === 'string') {
+          if (unit.unit !== matcher.unit) return;
+        }
+        else if (matcher.unit instanceof Set) {
+          if (!matcher.unit.has(unit.unit ?? false)) {
+            return;
+          }
+        }
+        else if (matcher.unit === false) {
+          if (matcher.unit != null) {
+            return;
+          }
+        }
+      }
+      else {
+        if (unit.unit != null) return;
+      }
+      yield {end_i:start_i + 1};
+      return;
+    }
+    case 'capture-content': {
+      for (const m of eachMatch(units, matcher.inner || {type:'any'}, start_i, context)) {
+        const res = units.slice(start_i, m.end_i).map(getUnitContent);
+        if (res.length === 1) {
+          yield {end_i:m.end_i, captures:[{value:res[0]}]};
+        }
+        else {
+          yield {end_i:m.end_i, captures:[{value:res.join('')}]};
+        }
+      }
+      return;
+    }
+    default: {
+      return;
+    }
+  }
+}
+
 export function replacePlaceholders(matcher: UnitMatcher, placeholders: Map<string, UnitMatcher>): UnitMatcher;
 export function replacePlaceholders(matchers: Map<string, UnitMatcher>, placeholders: Map<string, UnitMatcher>): Map<string, UnitMatcher>;
 export function replacePlaceholders(matcher: UnitMatcher | Map<string, UnitMatcher>, placeholders: Map<string, UnitMatcher>): UnitMatcher | Map<string, UnitMatcher> {
