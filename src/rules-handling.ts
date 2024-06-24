@@ -1162,7 +1162,7 @@ function *eachMatch(
       if (context == null) {
         throw new Error('context value is null or undefined');
       }
-      yield {end_i:start_i, captures:[{value:context, name:matcher.name}]};
+      yield {end_i:start_i, captures:[matcher.name ? {value:context, name:matcher.name} : {value:context}]};
       return;
     }
     case 'capture-array': {
@@ -1178,7 +1178,7 @@ function *eachMatch(
             arr.push(captures.splice(i, 1)[0].value);
           }
         }
-        captures.push({value:arr, name:matcher.name});
+        captures.push(matcher.name ? {value:arr, name:matcher.name} : {value: arr});
         yield {end_i: m.end_i, captures};
       }
       return;
@@ -1197,7 +1197,7 @@ function *eachMatch(
             i++;
           }
         }
-        captures.push({value:obj, name:matcher.name});
+        captures.push(matcher.name ? {value:obj, name:matcher.name} : {value:obj});
         yield {end_i: m.end_i, captures};
       }
       return;
@@ -1213,14 +1213,14 @@ function *eachMatch(
           return true;
         });
         if (capture) {
-          captures.push({value:(capture as any).value, name:matcher.name});
+          captures.push(matcher.name ? {value:(capture as any).value, name:matcher.name} : {value:(capture as any).value});
         }
         yield {end_i:m.end_i, captures};
       }
       return;
     }
     case 'capture-constant': {
-      yield {end_i:start_i, captures:[{value:matcher.constant, name: matcher.name}]};
+      yield {end_i:start_i, captures:[matcher.name ? {value:matcher.constant, name: matcher.name} : {value:matcher.constant}]};
       return;
     }
     case 'capture-transform': {
@@ -1230,7 +1230,7 @@ function *eachMatch(
           return arrays;
         }, [[],[]] as [CaptureInfo[], CaptureInfo[]]);
         const captures = named;
-        captures.push({value:matcher.transform(...ordered), name:matcher.name});
+        captures.push(matcher.name ? {value:matcher.transform(...ordered.map(v => v.value)), name: matcher.name} : {value:matcher.transform(...ordered.map(v => v.value))});
         yield {end_i:m.end_i, captures};
       }
       return;
@@ -1242,7 +1242,11 @@ function *eachMatch(
           return arrays;
         }, [[],[]] as [CaptureInfo[], CaptureInfo[]]);
         const captures = named;
-        captures.push({value:ordered.map(v => v.value).reduce((a, b) => ({value:matcher.reduce(a, b)})), name:matcher.name});
+        captures.push(
+          matcher.name
+          ? {value:ordered.map(v => v.value).reduce((a, b) => ({value:matcher.reduce(a, b)})), name:matcher.name}
+          : {value:ordered.map(v => v.value).reduce((a, b) => ({value:matcher.reduce(a, b)}))}
+        );
         yield {end_i:m.end_i, captures};
       }
       return;
@@ -1253,7 +1257,7 @@ function *eachMatch(
           end_i: m.end_i,
           captures: [
             ...m.captures || [],
-            ...units.slice(start_i, m.end_i).map(v => ({value:v, name:matcher.name})),
+            ...units.slice(start_i, m.end_i).map(matcher.name ? v => ({value:v, name:matcher.name}) : v => ({value:v})),
           ],
         };
       }
@@ -1300,11 +1304,12 @@ function *eachMatch(
     case 'capture-content': {
       for (const m of eachMatch(units, matcher.inner || {type:'any'}, start_i, context)) {
         const res = units.slice(start_i, m.end_i).map(getUnitContent);
+        const capValue = res.length === 1 ? res[0] : res.join('');
         yield {
           end_i: m.end_i,
           captures: [
             ...(m.captures || []).filter(v => typeof v.name === 'string'),
-            {value:res.length === 1 ? res[0] : res.join('')},
+            matcher.name ? {value:capValue, name:matcher.name} : {value:capValue},
           ],
         };
       }
