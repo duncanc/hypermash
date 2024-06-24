@@ -1392,7 +1392,7 @@ test('rules matching', async (ctx) => {
       ),
       5,
     );
-    assert.deepEqual(capture, Object.assign(Object.create(null), {a:1, b:2, c:3}));
+    assert.deepEqual(capture, {a:1, b:2, c:3});
   });
 
   await ctx.test('capture reduce', async ctx => {
@@ -1460,13 +1460,13 @@ test('rule grammar', async (ctx) => {
     assert.deepEqual(
       capture,
       [
-        Object.assign(Object.create(null), {
+        {
           name: 'blob',
           matcher: {
             type: 'placeholder',
             placeholder: 'bleeb',
           },
-        }),
+        },
       ] satisfies {name:string, matcher:UnitMatcher}[],
     );
   });
@@ -1486,7 +1486,7 @@ test('rule grammar', async (ctx) => {
     assert.deepEqual(
       capture,
       [
-        Object.assign(Object.create(null), {
+        {
           name: 'blob',
           matcher: {
             type: 'sequence',
@@ -1501,7 +1501,7 @@ test('rule grammar', async (ctx) => {
               },
             ],
           },
-        }),
+        },
       ] satisfies {name:string, matcher:UnitMatcher}[],
     );
   });
@@ -1521,7 +1521,7 @@ test('rule grammar', async (ctx) => {
     assert.deepEqual(
       capture,
       [
-        Object.assign(Object.create(null), {
+        {
           name: 'blob',
           matcher: {
             type: 'alternate',
@@ -1536,7 +1536,7 @@ test('rule grammar', async (ctx) => {
               },
             ],
           } satisfies UnitMatcher,
-        }),
+        },
       ] satisfies {name:string, matcher:UnitMatcher}[],
     );
   });
@@ -1556,7 +1556,7 @@ test('rule grammar', async (ctx) => {
     assert.deepEqual(
       capture,
       [
-        Object.assign(Object.create(null), {
+        {
           name: 'blob',
           matcher: {
             type: 'repeat',
@@ -1567,7 +1567,7 @@ test('rule grammar', async (ctx) => {
             min: 0,
             max: 1,
           } satisfies UnitMatcher,
-        }),
+        },
       ] satisfies {name:string, matcher:UnitMatcher}[],
     );
   });
@@ -1587,7 +1587,7 @@ test('rule grammar', async (ctx) => {
     assert.deepEqual(
       capture,
       [
-        Object.assign(Object.create(null), {
+        {
           name: 'blob',
           matcher: {
             type: 'repeat',
@@ -1598,7 +1598,7 @@ test('rule grammar', async (ctx) => {
             min: 0,
             max: Infinity,
           } satisfies UnitMatcher,
-        }),
+        },
       ] satisfies {name:string, matcher:UnitMatcher}[],
     );
   });
@@ -1618,7 +1618,7 @@ test('rule grammar', async (ctx) => {
     assert.deepEqual(
       capture,
       [
-        Object.assign(Object.create(null), {
+        {
           name: 'blob',
           matcher: {
             type: 'repeat',
@@ -1629,7 +1629,7 @@ test('rule grammar', async (ctx) => {
             min: 1,
             max: Infinity,
           } satisfies UnitMatcher,
-        }),
+        },
       ] satisfies {name:string, matcher:UnitMatcher}[],
     );
   });
@@ -1649,7 +1649,7 @@ test('rule grammar', async (ctx) => {
     assert.deepEqual(
       capture,
       [
-        Object.assign(Object.create(null), {
+        {
           name: 'blob',
           matcher: {
             type: 'repeat',
@@ -1660,7 +1660,7 @@ test('rule grammar', async (ctx) => {
             min: 3,
             max: 3,
           } satisfies UnitMatcher,
-        }),
+        },
       ] satisfies {name:string, matcher:UnitMatcher}[],
     );
   });
@@ -1680,7 +1680,7 @@ test('rule grammar', async (ctx) => {
     assert.deepEqual(
       capture,
       [
-        Object.assign(Object.create(null), {
+        {
           name: 'blob',
           matcher: {
             type: 'repeat',
@@ -1691,7 +1691,7 @@ test('rule grammar', async (ctx) => {
             min: 3,
             max: 5,
           } satisfies UnitMatcher,
-        }),
+        },
       ] satisfies {name:string, matcher:UnitMatcher}[],
     );
   });
@@ -1711,7 +1711,7 @@ test('rule grammar', async (ctx) => {
     assert.deepEqual(
       capture,
       [
-        Object.assign(Object.create(null), {
+        {
           name: 'blob',
           matcher: {
             type: 'repeat',
@@ -1722,7 +1722,7 @@ test('rule grammar', async (ctx) => {
             min: 3,
             max: Infinity,
           } satisfies UnitMatcher,
-        }),
+        },
       ] satisfies {name:string, matcher:UnitMatcher}[],
     );
   });
@@ -1866,10 +1866,10 @@ test('rule parsing', async (ctx) => {
       ['something', {
         type: 'sequence',
         sequence: [
-          Object.assign(Object.create(null), {
+          {
             type:'negative-lookahead',
             inner: {type:'symbol', symbol:';'},
-          }),
+          },
           {type:'any'},
         ],
       }],

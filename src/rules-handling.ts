@@ -772,7 +772,7 @@ export function matchUnits(
       return end_i;
     }
     case 'capture-object': {
-      const obj: {[key: string]: unknown} = Object.create(null);
+      const obj: {[key: string]: unknown} = {};
       const oncapture2 = (v: unknown, name?: string) => {
         if (typeof name === 'string') {
           obj[name] = v;
