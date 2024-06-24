@@ -1167,29 +1167,55 @@ function *eachMatch(
     }
     case 'capture-array': {
       for (const m of eachMatch(units, matcher.inner, start_i, context)) {
-        yield {end_i: m.end_i, captures: [
-          {
-            value: (m.captures || []).map(({ value }) => value),
-            name: matcher.name,
-          },
-        ]};
+        const captures = (m.captures || []).slice();
+        const arr: unknown[] = [];
+        let i = 0;
+        while (i < captures.length) {
+          if (typeof captures[i].name === 'string') {
+            i++;
+          }
+          else {
+            arr.push(captures.splice(i, 1)[0].value);
+          }
+        }
+        captures.push({value:arr, name:matcher.name});
+        yield {end_i: m.end_i, captures};
       }
       return;
     }
     case 'capture-object': {
       for (const m of eachMatch(units, matcher.inner, start_i, context)) {
+        const captures = (m.captures || []).slice();
         const obj = {};
-        for (const c of m.captures || []) {
-          if (c.name) obj[c.name] = c.value;
+        let i = 0;
+        while (i < captures.length) {
+          if (typeof captures[i].name === 'string') {
+            const {name, value} = captures.splice(i,1)[0];
+            obj[name!] = value;
+          }
+          else {
+            i++;
+          }
         }
-        yield {end_i: m.end_i, captures:[{value:obj}]};
+        captures.push({value:obj, name:matcher.name});
+        yield {end_i: m.end_i, captures};
       }
       return;
     }
     case 'capture-named': {
       for (const m of eachMatch(units, matcher.inner, start_i, context)) {
-        const cap = m.captures && m.captures[0];
-        yield {end_i:m.end_i, captures:cap ? [{name:matcher.name, value:cap.value}] : []};
+        let capture: CaptureInfo | null = null;
+        const captures = (m.captures || []).filter(cap => {
+          if (typeof cap.name !== 'string') {
+            capture = cap;
+            return false;
+          }
+          return true;
+        });
+        if (capture) {
+          captures.push({value:(capture as any).value, name:matcher.name});
+        }
+        yield {end_i:m.end_i, captures};
       }
       return;
     }
@@ -1199,36 +1225,37 @@ function *eachMatch(
     }
     case 'capture-transform': {
       for (const m of eachMatch(units, matcher.inner, start_i, context)) {
-        const caps = (m.captures || []).filter(v => !v.name).map(v => v.value);
-        const newCap = matcher.transform(...caps);
-        yield {end_i:m.end_i, captures:[{value:newCap, name:matcher.name}]};
+        const [named, ordered] = (m.captures || []).reduce((arrays, el) => {
+          arrays[(typeof el.name === 'string') ? 0 : 1].push(el);
+          return arrays;
+        }, [[],[]] as [CaptureInfo[], CaptureInfo[]]);
+        const captures = named;
+        captures.push({value:matcher.transform(...ordered), name:matcher.name});
+        yield {end_i:m.end_i, captures};
       }
       return;
     }
     case 'capture-reduce': {
       for (const m of eachMatch(units, matcher.inner, start_i, context)) {
-        const caps = (m.captures || []).filter(v => !v.name).map(v => v.value);
-        const newCap = caps.reduce((a, b) => matcher.reduce(a, b));
-        yield {end_i:m.end_i, captures:[{value:newCap, name:matcher.name}]};
+        const [named, ordered] = (m.captures || []).reduce((arrays, el) => {
+          arrays[(typeof el.name === 'string') ? 0 : 1].push(el);
+          return arrays;
+        }, [[],[]] as [CaptureInfo[], CaptureInfo[]]);
+        const captures = named;
+        captures.push({value:ordered.map(v => v.value).reduce((a, b) => ({value:matcher.reduce(a, b)})), name:matcher.name});
+        yield {end_i:m.end_i, captures};
       }
       return;
     }
     case 'capture-unit': {
       for (const m of eachMatch(units, matcher.inner || {type:'any'}, start_i, context)) {
-        if (matcher.name) {
-          if (m.end_i > start_i) {
-            yield {
-              end_i: m.end_i,
-              captures: [{value:units[m.end_i - 1], name:matcher.name}],
-            };
-          }
-        }
-        else {
-          yield {
-            end_i: m.end_i,
-            captures: units.slice(start_i, m.end_i).map(v => ({value:v})),
-          };
-        }
+        yield {
+          end_i: m.end_i,
+          captures: [
+            ...m.captures || [],
+            ...units.slice(start_i, m.end_i).map(v => ({value:v, name:matcher.name})),
+          ],
+        };
       }
       return;
     }
@@ -1273,12 +1300,13 @@ function *eachMatch(
     case 'capture-content': {
       for (const m of eachMatch(units, matcher.inner || {type:'any'}, start_i, context)) {
         const res = units.slice(start_i, m.end_i).map(getUnitContent);
-        if (res.length === 1) {
-          yield {end_i:m.end_i, captures:[{value:res[0]}]};
-        }
-        else {
-          yield {end_i:m.end_i, captures:[{value:res.join('')}]};
-        }
+        yield {
+          end_i: m.end_i,
+          captures: [
+            ...(m.captures || []).filter(v => typeof v.name === 'string'),
+            {value:res.length === 1 ? res[0] : res.join('')},
+          ],
+        };
       }
       return;
     }
