@@ -1,6 +1,6 @@
 
 import { test, describe, it } from 'node:test';
-import assert from 'node:assert/strict';
+import * as assert from 'node:assert/strict';
 import { eachToken, Token, matchUnits, toUnits, Unit, UnitMatcher, ruleSetUnit, parseRules } from '../src/rules-handling';
 
 test('rules tokenization', async (ctx) => {
