@@ -1108,7 +1108,7 @@ function *eachMatch(
       }
     }
     case 'subset': {
-      function *eachSubset(set: UnitMatcher[], start_i: number) {
+      function *eachSubset(set: UnitMatcher[], start_i: number): Generator<MatchInfo, void, void> {
         if (set.length === 1) {
           yield *eachMatch(units, set[0], start_i, context);
         }
@@ -1186,7 +1186,7 @@ function *eachMatch(
     case 'capture-object': {
       for (const m of eachMatch(units, matcher.inner, start_i, context)) {
         const captures = (m.captures || []).slice();
-        const obj = {};
+        const obj: {[key: string]: unknown} = {};
         let i = 0;
         while (i < captures.length) {
           if (typeof captures[i].name === 'string') {
