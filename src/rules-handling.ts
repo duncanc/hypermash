@@ -1059,53 +1059,60 @@ function *eachMatch(
       }
     }
     case 'sequence': {
-      const iterators: Iterator<MatchInfo>[] = [];
-      const matches: MatchInfo[] = [];
-      for (let i = 0; i < matcher.sequence.length; i++) {
-        const iter = eachMatch(
-          units,
-          matcher.sequence[i],
-          i === 0 ? start_i : matches[i-1].end_i,
-          context,
-        );
-        const first = iter.next();
-        if (first.done) return;
-        iterators.push(iter);
-        matches.push(first.value);
-      }
-      captureLoop: for (;;) {
-        const captures = matches.reduce(
-          (a: CaptureInfo[] | undefined, b: MatchInfo) => {
-            if (!a) return b.captures;
-            if (!b.captures) return a;
-            return [...a, ...b.captures];
-          }, undefined);
-        yield {
-          end_i: (matches[matches.length-1] || {end_i:start_i}).end_i,
-          captures,
-        };
-        let i = iterators.length - 1;
-        stepBack: for (; i >= 0; i--) {
-          const step = iterators[i].next();
-          if (step.done) continue;
-          matches[i] = step.value;
-          for (let j = i+1; j < iterators.length; j++) {
-            const iter = eachMatch(
-              units,
-              matcher.sequence[j],
-              matches[j-1].end_i,
-              context);
-            const step = iterators[j].next();
-            if (step.done) {
-              continue stepBack;
-            }
-            iterators[j] = iter;
-            matches[j] = step.value;
-          }
-          continue captureLoop;
-        }
+      if (matcher.sequence.length === 0) {
+        yield {end_i:start_i};
         return;
       }
+      const firstIter = eachMatch(
+        units,
+        matcher.sequence[0],
+        start_i,
+        context,
+      );
+      const firstStep = firstIter.next();
+      if (firstStep.done) return;
+      const loopStates: Array<{iter: Iterator<MatchInfo>, current:MatchInfo}> = [{
+        iter: firstIter,
+        current: firstStep.value,
+      }];
+      do {
+        if (loopStates.length === matcher.sequence.length) {
+          yield {
+            end_i: loopStates[loopStates.length-1].current.end_i,
+            captures: loopStates.reduce(
+              (a: CaptureInfo[] | undefined, b: {current:MatchInfo}) => {
+                if (!a) return b.current.captures;
+                if (!b.current.captures) return a;
+                return [...a, ...b.current.captures];
+              }, undefined),
+          };
+        }
+        else {
+          const nextIter = eachMatch(
+            units,
+            matcher.sequence[loopStates.length],
+            loopStates[loopStates.length-1].current.end_i,
+            context,
+          );
+          const nextStep = nextIter.next();
+          if (!nextStep.done) {
+            loopStates.push({iter:nextIter, current:nextStep.value});
+            continue;
+          }
+        }
+        do {
+          const loopState = loopStates[loopStates.length-1];
+          const step = loopState.iter.next();
+          if (step.done) {
+            loopStates.pop();
+          }
+          else {
+            loopState.current = step.value;
+            break;
+          }
+        } while (loopStates.length > 0);
+      } while (loopStates.length > 0);
+      return;
     }
     case 'subset': {
       function *eachSubset(set: UnitMatcher[], start_i: number): Generator<MatchInfo, void, void> {
