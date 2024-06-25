@@ -2172,23 +2172,16 @@ type RuleParseContext = {
 
 export function parseRules(src: string, context: RuleParseContext) {
   const units = [...toUnits(src)];
-  let cap: Array<{name:string, matcher:UnitMatcher}> | null = null;
   const newContext: RuleParseContext = {
     functions: new Map([...defaultFunctions, ...context.functions]),
     macros: new Map([...defaultMacros, ...context.macros]),
   };
-  matchUnits(
-    units,
-    ruleSetUnit,
-    c => { cap = c as any; },
-    0,
-    newContext,
-  );
-  if (cap as any == null) {
-    throw new Error('failed to match');
+  for (const m of eachMatch(units, ruleSetUnit, 0, newContext)) {
+    const cap = m.captures![0].value as Array<{name:string, matcher:UnitMatcher}>;
+    const result = new Map(cap.map(({ name, matcher }) => [name, matcher]));
+    return replacePlaceholders(result, newContext.macros);
   }
-  const result = new Map(cap!.map(({ name, matcher }) => [name, matcher]));
-  return replacePlaceholders(result, newContext.macros);
+  throw new Error('failed to match');
 }
 
 export function pairToSequence(a: UnitMatcher, b: UnitMatcher): UnitMatcher {
