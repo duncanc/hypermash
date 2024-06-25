@@ -916,7 +916,7 @@ function *eachMatch(
     case 'nonzero-whitespace': {
       if (start_i !== 0 && (
         units[start_i-1].type === 'whitespace'
-        && units[start_i-1].type === 'comment')
+        || units[start_i-1].type === 'comment')
       ) {
         yield {end_i: start_i};
       }
