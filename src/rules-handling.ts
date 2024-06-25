@@ -1326,8 +1326,14 @@ export function replacePlaceholders(matchers: Map<string, UnitMatcher>, placehol
 export function replacePlaceholders(matcher: UnitMatcher | Map<string, UnitMatcher>, placeholders: Map<string, UnitMatcher>): UnitMatcher | Map<string, UnitMatcher> {
   if (matcher instanceof Map) {
     const result = new Map<string, UnitMatcher>();
-    for (const name of matcher.keys()) {
-      result.set(name, {} as UnitMatcher);
+    let redirects = new Map<string, string>();
+    for (const [name, m] of matcher) {
+      if (m.type === 'placeholder') {
+        redirects.set(name, m.placeholder);
+      }
+      else {
+        result.set(name, {} as UnitMatcher);
+      }
     }
     const combined = new Map<string, UnitMatcher>(placeholders);
     for (const [name, value] of result) {
@@ -1335,6 +1341,16 @@ export function replacePlaceholders(matcher: UnitMatcher | Map<string, UnitMatch
     }
     for (const [name, value] of result) {
       Object.assign(value, replacePlaceholders(matcher.get(name)!, combined));
+    }
+    for (let [redirFrom, redirTo] of redirects) {
+      while (redirects.has(redirTo)) {
+        redirTo = redirects.get(redirTo)!;
+      }
+      const redir = combined.get(redirTo);
+      if (!redir) {
+        throw new Error('rule not defined: ' + redirTo);
+      }
+      result.set(redirFrom, redir);
     }
     return result;
   }
@@ -2278,4 +2294,14 @@ export function captureUnits(units: Unit[] | string, matcher: UnitMatcher, conte
   if (typeof units === 'string') units = toUnits(units);
   matchUnits(units, matcher, c => { capture = c; }, 0, context);
   return capture;
+}
+
+export function matchOnce(units: string | Unit[], matcher: UnitMatcher, context = {}) {
+  if (typeof units === 'string') units = toUnits(units);
+  for (const m of eachMatch(units, matcher, 0, context)) {
+    const caps = (m.captures || []).filter(v => typeof v.name !== 'string');
+    if (caps.length > 0) return caps[0].value;
+    return true;
+  }
+  return false;
 }
