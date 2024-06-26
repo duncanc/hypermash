@@ -25,3 +25,17 @@ export const CSS_BACKDROP_FILTER_PROP = (
   : CSS.supports('-webkit-backdrop-filter', 'blur(2px)') ? '-webkit-backdrop-filter'
   : null
 );
+
+export const speech = {
+  Recognition: 'SpeechRecognition' in window ? SpeechRecognition
+  : 'webkitSpeechRecognition' in window ? webkitSpeechRecognition
+  : null,
+  RecognitionEvent: 'SpeechRecognitionEvent' in window ? SpeechRecognitionEvent
+  : 'webkitSpeechRecognitionEvent' in window ? webkitSpeechRecognitionEvent
+  : null,
+  GrammarList: 'SpeechGrammarList' in window ? SpeechGrammarList
+  : 'webkitSpeechGrammar' in window ? webkitSpeechGrammarList
+  : null,
+  synthesis: 'speechSynthesis' in window ? speechSynthesis
+  : null,
+};
