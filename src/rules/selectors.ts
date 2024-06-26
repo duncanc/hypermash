@@ -5,7 +5,7 @@ const map = parseRules(`
   selectors: CAP_ARRAY( selector (',' selector)* );
   selector: CAP_OBJECT(
     CAP_NAMED(initial, -selector-unit)
-    CAP_NAMED(subsequent, CAP_ARRAY( CAP_OBJECT(CAP_NAMED(combinator, -combinator) CAP_NAMED(unit, -selector-unit))+ ))?
+    CAP_NAMED(subsequent, CAP_ARRAY( CAP_OBJECT(CAP_NAMED(combinator, -combinator) CAP_NAMED(clauses, -selector-unit))+ ))?
   );
   -combinator: (
     '>' CAP_CONST('child') |
@@ -87,3 +87,60 @@ const map = parseRules(`
 
 export const selector = map.get('selector')!;
 export const selectors = map.get('selectors')!;
+
+export type Combinator = (
+  | 'descendant'
+  | 'child'
+  | 'next-sibling'
+  | 'subsequent-sibling'
+  | 'grid'
+);
+
+export namespace SelectorClause {
+  export type Element = {
+    type: 'element';
+    name: string | true;
+    namespace?: string | true;
+  };
+  export type Id = {
+    type: 'id';
+    id: string;
+  };
+  export type Class = {
+    type: 'class';
+    className: string;
+  };
+  export type AttributePresent = {
+    type: 'attribute';
+    namespace?: string | true;
+    name: string;
+    operator: 'present';
+  };
+  export type AttributeMatch = {
+    type: 'attribute';
+    namespace?: string | true;
+    name: string;
+    operator: (
+      | 'equals'
+      | 'starts-with'
+      | 'ends-with'
+      | 'has-substring'
+      | 'word-list-contains'
+      | 'equals-or-dashed-prefix'
+    );
+    value: string;
+    caseSensitive?: boolean;
+  };
+}
+export type SelectorClause = (
+  | SelectorClause.Element
+  | SelectorClause.Id
+  | SelectorClause.Class
+  | SelectorClause.AttributePresent
+  | SelectorClause.AttributeMatch
+);
+
+export interface SelectorSet {
+  initial: SelectorClause[];
+  subsequent?: Array<{combinator: Combinator; clauses: SelectorClause[]}>;
+}
