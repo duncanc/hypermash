@@ -19,3 +19,9 @@ export const CSS_ELEMENT_IMAGE_FUNC = (
   : CSS.supports('background-image', '-moz-element(#id)') ? '-moz-element'
   : null
 );
+
+export const CSS_BACKDROP_FILTER_PROP = (
+  CSS.supports('backdrop-filter', 'blur(2px)') ? 'backdrop-filter'
+  : CSS.supports('-webkit-backdrop-filter', 'blur(2px)') ? '-webkit-backdrop-filter'
+  : null
+);
