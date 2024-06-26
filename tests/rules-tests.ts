@@ -1,7 +1,8 @@
 
 import { test, describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { eachToken, Token, matchUnits, toUnits, Unit, UnitMatcher, ruleSetUnit, parseRules } from '../src/rules-handling';
+import { eachToken, Token, matchUnits, toUnits, Unit, UnitMatcher, ruleSetUnit, parseRules, matchOnce } from '../src/rules-handling';
+import { SelectorSet, selectors } from '../src/rules/selectors';
 
 test('rules tokenization', async (ctx) => {
 
@@ -1874,6 +1875,108 @@ test('rule parsing', async (ctx) => {
         ],
       }],
     ] satisfies [string, UnitMatcher][]))
+  });
+
+});
+
+test('selectors', async (ctx) => {
+
+  await ctx.test('elements', async ctx => {
+
+    assert.deepEqual(
+      matchOnce('a', selectors),
+      [
+        {
+          initial: [
+            {
+              type: 'element',
+              name: 'a'
+            }
+          ]
+        },
+      ] satisfies SelectorSet[]
+    );
+
+    assert.deepEqual(
+      matchOnce('*', selectors),
+      [
+        {
+          initial: [
+            {
+              type: 'element',
+              name: true,
+            }
+          ]
+        },
+      ] satisfies SelectorSet[]
+    );
+
+    assert.deepEqual(
+      matchOnce('a|b', selectors),
+      [
+        {
+          initial: [
+            {
+              type: 'element',
+              namespace: 'a',
+              name: 'b',
+            }
+          ]
+        },
+      ] satisfies SelectorSet[]
+    );
+
+    assert.deepEqual(
+      matchOnce('*|b', selectors),
+      [
+        {
+          initial: [
+            {
+              type: 'element',
+              namespace: true,
+              name: 'b',
+            }
+          ]
+        },
+      ] satisfies SelectorSet[]
+    );
+  
+  });
+
+  await ctx.test('id selector', async ctx => {
+
+    assert.deepEqual(
+      matchOnce('#item', selectors),
+      [
+        {
+          initial: [
+            {
+              type: 'id',
+              id: 'item'
+            }
+          ]
+        },
+      ] satisfies SelectorSet[]
+    );
+
+  });
+
+  await ctx.test('class selector', async ctx => {
+
+    assert.deepEqual(
+      matchOnce('.test', selectors),
+      [
+        {
+          initial: [
+            {
+              type: 'class',
+              className: 'test',
+            }
+          ]
+        },
+      ] satisfies SelectorSet[]
+    );
+
   });
 
 });
