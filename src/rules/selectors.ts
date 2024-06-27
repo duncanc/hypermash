@@ -7,6 +7,17 @@ const map = parseRules(`
     CAP_NAMED(initial, -selector-unit)
     CAP_NAMED(subsequent, CAP_ARRAY( CAP_OBJECT(CAP_NAMED(combinator, -combinator) CAP_NAMED(clauses, -selector-unit))+ ))?
   );
+  relative-selectors: CAP_ARRAY( relative-selector (',' relative-selector)* );
+  relative-selector: CAP_ARRAY(
+    (
+      CAP_OBJECT(CAP_NAMED(clauses, -selector-unit) CAP_NAMED(combinator, CAP_CONST('descendant')))
+      CAP_OBJECT(CAP_NAMED(combinator, -combinator) CAP_NAMED(clauses, -selector-unit))*
+    )
+    |
+    (
+      CAP_OBJECT(CAP_NAMED(combinator, -combinator) CAP_NAMED(clauses, -selector-unit))+
+    )
+  );
   -combinator: (
     '>' CAP_CONST('child') |
     '+' CAP_CONST('next-sibling') |
@@ -87,6 +98,8 @@ const map = parseRules(`
 
 export const selector = map.get('selector')!;
 export const selectors = map.get('selectors')!;
+export const relativeSelector = map.get('relative-selector')!;
+export const relativeSelectors = map.get('relative-selectors')!;
 
 export type Combinator = (
   | 'descendant'
@@ -144,3 +157,5 @@ export interface SelectorSet {
   initial: SelectorClause[];
   subsequent?: Array<{combinator: Combinator; clauses: SelectorClause[]}>;
 }
+
+export type RelativeSelectorSet = Array<{combinator: Combinator; clauses: SelectorClause[]}>;

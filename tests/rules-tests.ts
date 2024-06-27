@@ -2,7 +2,7 @@
 import { test, describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import { eachToken, Token, matchUnits, toUnits, Unit, UnitMatcher, ruleSetUnit, parseRules, matchOnce } from '../src/rules-handling';
-import { SelectorSet, selectors } from '../src/rules/selectors';
+import { RelativeSelectorSet, SelectorSet, relativeSelectors, selectors } from '../src/rules/selectors';
 
 test('rules tokenization', async (ctx) => {
 
@@ -1975,6 +1975,34 @@ test('selectors', async (ctx) => {
           ]
         },
       ] satisfies SelectorSet[]
+    );
+
+  });
+
+  test('relative selectors', async (ctx) => {
+
+    assert.deepEqual(
+      matchOnce('> x, ~ y, z', relativeSelectors),
+      [
+        [
+          {
+            combinator: 'child',
+            clauses: [{type:'element', name:'x'}],
+          },
+        ],
+        [
+          {
+            combinator: 'subsequent-sibling',
+            clauses: [{type:'element', name:'y'}],
+          },
+        ],
+        [
+          {
+            combinator: 'descendant',
+            clauses: [{type:'element', name:'z'}],
+          },
+        ],
+      ] satisfies RelativeSelectorSet[]
     );
 
   });
